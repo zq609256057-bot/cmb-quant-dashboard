@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>招商银行量化评分 · CMB_SCORE_MODEL_V1_1</title>
+<meta name="description" content="招商银行（600036.SH）量化评分看板 · CMB_SCORE_MODEL_V1_1">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<div id="banner" class="banner banner-err" hidden></div>
+
+<!-- Hero：基础评分 -->
+<section class="score-hero">
+  <div class="hero-top">
+    <span id="hero-badge" class="model-badge">CMB_SCORE_MODEL_V1_1</span>
+    <span class="hero-label">评分日 <span id="hero-date" class="num">—</span></span>
+  </div>
+  <div id="hero-title" class="hero-label">基础评分（Base Score）</div>
+  <div><span id="hero-score" class="hero-score hero-tone-unavailable">—</span><span class="hero-unit">/ 100</span></div>
+  <div id="hero-track" class="scale-track"><div class="scale-fill" style="width:0%"></div></div>
+  <div id="hero-meta" class="hero-meta"></div>
+</section>
+
+<!-- 历史日选择器 -->
+<section class="card">
+  <div class="card-title">历史查询</div>
+  <div class="card-sub">切换至已发布的交易日快照；缺失日显示 NO_SNAPSHOT，不使用最近一天冒充。</div>
+  <div class="selector" style="margin-top:8px">
+    <label for="day-select" class="hint">交易日</label>
+    <select id="day-select"></select>
+    <span class="hint">切换只做读取与渲染，不重新计算评分。</span>
+  </div>
+</section>
+
+<!-- Base / Overlay / Final -->
+<section class="card">
+  <div class="card-title">评分三层结构</div>
+  <div class="card-sub">Base（100 分制）→ Overlay（0 ~ -20）→ Final。三层相互独立，不可互相替代。</div>
+  <div id="score-cards" class="kpi-grid" style="margin-top:12px"></div>
+  <div id="base-final-note" class="banner banner-warn" hidden></div>
+</section>
+
+<!-- 五维 -->
+<section class="card">
+  <div class="card-title">五维得分</div>
+  <div class="card-sub">维度得分由本地引擎计算后发布，页面只做展示。</div>
+  <div id="dim-grid" class="kpi-grid" style="margin-top:12px"></div>
+</section>
+
+<!-- 24 项 -->
+<section class="card">
+  <div class="card-title">24 项指标明细</div>
+  <div class="card-sub">展示值为脱敏后的发布值；得分与满分均来自本地引擎。</div>
+  <div class="table-scroll"><table id="metric-table"></table></div>
+</section>
+
+<!-- Overlay 触发器 -->
+<section class="card">
+  <div class="card-title">Overlay 触发器状态</div>
+  <div class="card-sub">仅展示输入可用性；是否计入处罚由正式 Overlay 规则决定，页面不推断。</div>
+  <div class="table-scroll"><table id="trigger-table"></table></div>
+  <div id="trigger-empty" class="card-sub" hidden>暂无触发器状态。</div>
+</section>
+
+<!-- 运行时 -->
+<section class="card">
+  <div class="card-title">运行时与数据来源</div>
+  <div class="card-sub">GitHub 仅为展示镜像；本地为唯一事实来源。</div>
+  <div id="health-banner" class="banner banner-warn" hidden style="margin-top:8px"></div>
+  <div class="table-scroll"><table id="runtime-table"></table></div>
+</section>
+
+<footer>
+  模型 <strong>CMB_SCORE_MODEL_V1_1</strong> · 标的 600036.SH · 评分由本地 Production Score Engine 计算后发布，本页面不执行任何评分计算。<br>
+  本页仅用于研究与展示，不构成投资建议。
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

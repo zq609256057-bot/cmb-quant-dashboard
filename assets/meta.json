@@ -1,0 +1,284 @@
+{
+  "meta_id": "CMB_FRONTEND_META_V1",
+  "model_id": "CMB_SCORE_MODEL_V1_1",
+  "model_version": "V1_1",
+  "risk_overlay_id": "CMB_BANK_RISK_OVERLAY_V1_1",
+  "subject": {
+    "official_trading_valuation_technical_subject": "600036.SH",
+    "subject_scope": "招商银行A股",
+    "excluded": [
+      "3968.HK"
+    ],
+    "exclusion_rule": "3968.HK不是当前正式评分标的；禁止使用3968.HK的价格、估值、股息率或技术指标参与CMB_SCORE_MODEL_V1_1。未来研究H股必须建立独立Model ID与独立Contract。"
+  },
+  "total_score": 100,
+  "dimensions": {
+    "DIMENSION_01": {
+      "name": "盈利与经营能力",
+      "en": "ProfitabilityOperations",
+      "max_score": 26,
+      "metrics": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06"
+      ]
+    },
+    "DIMENSION_02": {
+      "name": "资产安全与信用风险",
+      "en": "AssetQualityCreditRisk",
+      "max_score": 27,
+      "metrics": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06"
+      ]
+    },
+    "DIMENSION_03": {
+      "name": "资本与负债护城河",
+      "en": "CapitalFundingMoat",
+      "max_score": 19,
+      "metrics": [
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ]
+    },
+    "DIMENSION_04": {
+      "name": "股东回报与估值",
+      "en": "ShareholderReturnValuation",
+      "max_score": 20,
+      "metrics": [
+        "D01",
+        "D02",
+        "V01",
+        "V02",
+        "V03"
+      ]
+    },
+    "DIMENSION_05": {
+      "name": "市场环境与交易状态",
+      "en": "MarketEnvironmentTradingState",
+      "max_score": 8,
+      "metrics": [
+        "M01",
+        "T01",
+        "T02"
+      ]
+    }
+  },
+  "metrics": {
+    "P01": {
+      "name": "净息差",
+      "en": "Net Interest Margin",
+      "abbr": "NIM",
+      "dimension": "DIMENSION_01",
+      "max_score": 7,
+      "unit": "percentage_points"
+    },
+    "P02": {
+      "name": "年化平均总资产收益率",
+      "en": "Return on Average Assets",
+      "abbr": "ROAA",
+      "dimension": "DIMENSION_01",
+      "max_score": 5,
+      "unit": "percentage_points"
+    },
+    "P03": {
+      "name": "年化加权平均净资产收益率",
+      "en": "Return on Average Equity",
+      "abbr": "ROAE",
+      "dimension": "DIMENSION_01",
+      "max_score": 4,
+      "unit": "percentage_points"
+    },
+    "P04": {
+      "name": "归属于母公司股东净利润3年复合增长率",
+      "en": "3-Year CAGR of Net Profit Attributable to Parent",
+      "abbr": null,
+      "dimension": "DIMENSION_01",
+      "max_score": 4,
+      "unit": "percent"
+    },
+    "P05": {
+      "name": "手续费及佣金净收入同比",
+      "en": "Net Fee and Commission Income YoY",
+      "abbr": null,
+      "dimension": "DIMENSION_01",
+      "max_score": 3,
+      "unit": "percent"
+    },
+    "P06": {
+      "name": "成本收入比",
+      "en": "Cost-to-Income Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_01",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "A01": {
+      "name": "不良贷款率",
+      "en": "Non-Performing Loan Ratio",
+      "abbr": "NPL",
+      "dimension": "DIMENSION_02",
+      "max_score": 7,
+      "unit": "percentage_points"
+    },
+    "A02": {
+      "name": "拨备覆盖率",
+      "en": "Loan Loss Provision Coverage Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_02",
+      "max_score": 5,
+      "unit": "percentage_points"
+    },
+    "A03": {
+      "name": "关注类贷款占比",
+      "en": "Special Mention Loan Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_02",
+      "max_score": 5,
+      "unit": "percentage_points"
+    },
+    "A04": {
+      "name": "信用成本",
+      "en": "Credit Cost",
+      "abbr": null,
+      "dimension": "DIMENSION_02",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "A05": {
+      "name": "零售贷款不良率",
+      "en": "Retail Loan NPL Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_02",
+      "max_score": 4,
+      "unit": "percentage_points"
+    },
+    "A06": {
+      "name": "90天以上逾期贷款率",
+      "en": "Loans Overdue More Than 90 Days Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_02",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "F01": {
+      "name": "核心一级资本充足率",
+      "en": "Common Equity Tier 1 Capital Adequacy Ratio",
+      "abbr": "CET1",
+      "dimension": "DIMENSION_03",
+      "max_score": 7,
+      "unit": "percentage_points"
+    },
+    "F02": {
+      "name": "活期存款占比",
+      "en": "Demand Deposit Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_03",
+      "max_score": 5,
+      "unit": "percentage_points"
+    },
+    "F03": {
+      "name": "客户存款平均成本率",
+      "en": "Average Customer Deposit Cost Ratio",
+      "abbr": null,
+      "dimension": "DIMENSION_03",
+      "max_score": 4,
+      "unit": "percentage_points"
+    },
+    "F04": {
+      "name": "流动性覆盖率",
+      "en": "Liquidity Coverage Ratio",
+      "abbr": "LCR",
+      "dimension": "DIMENSION_03",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "D01": {
+      "name": "10年股息率历史分位",
+      "en": "10-Year Dividend Yield Historical Percentile",
+      "abbr": null,
+      "dimension": "DIMENSION_04",
+      "max_score": 4,
+      "unit": "percentile"
+    },
+    "D02": {
+      "name": "分红政策质量",
+      "en": "Dividend Policy Quality",
+      "abbr": null,
+      "dimension": "DIMENSION_04",
+      "max_score": 4,
+      "unit": "score"
+    },
+    "V01": {
+      "name": "PB十年历史分位",
+      "en": "10-Year Price-to-Book Historical Percentile",
+      "abbr": null,
+      "dimension": "DIMENSION_04",
+      "max_score": 7,
+      "unit": "percentile"
+    },
+    "V02": {
+      "name": "股息率减中国10年期国债收益率",
+      "en": "Dividend Yield Minus China 10Y Government Bond Yield",
+      "abbr": null,
+      "dimension": "DIMENSION_04",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "V03": {
+      "name": "PE-TTM十年历史分位",
+      "en": "10-Year PE-TTM Historical Percentile",
+      "abbr": null,
+      "dimension": "DIMENSION_04",
+      "max_score": 2,
+      "unit": "percentile"
+    },
+    "M01": {
+      "name": "中国10年期国债收益率减1年期国债收益率",
+      "en": "China 10Y-1Y Government Bond Yield Spread",
+      "abbr": null,
+      "dimension": "DIMENSION_05",
+      "max_score": 3,
+      "unit": "percentage_points"
+    },
+    "T01": {
+      "name": "252日价格位置 + MA250",
+      "en": "252-Day Price Position + MA250 Composite",
+      "abbr": null,
+      "dimension": "DIMENSION_05",
+      "max_score": 3,
+      "unit": "ratio"
+    },
+    "T02": {
+      "name": "60日年化波动率",
+      "en": "60-Day Annualized Volatility",
+      "abbr": null,
+      "dimension": "DIMENSION_05",
+      "max_score": 2,
+      "unit": "percentage_points"
+    }
+  },
+  "display_rules": {
+    "missing_glyph": "—",
+    "score_decimals": 2,
+    "value_decimals": 2,
+    "model_badge": "CMB_SCORE_MODEL_V1_1",
+    "forbidden_badges": [
+      "V1.2",
+      "Hybrid",
+      "Shadow",
+      "Research"
+    ],
+    "base_is_not_final": true,
+    "missing_overlay_is_not_zero": true
+  }
+}

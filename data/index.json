@@ -1,0 +1,10 @@
+{
+  "artifact": "CMB_PUBLIC_HISTORY_INDEX_V1",
+  "count": 1,
+  "latest_score_date": "2026-09-24",
+  "model_id": "CMB_SCORE_MODEL_V1_1",
+  "published_days": [
+    "2026-09-24"
+  ],
+  "updated_at": "2026-09-27T03:03:25.726274+00:00"
+}

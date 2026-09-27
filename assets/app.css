@@ -1,0 +1,133 @@
+/* CMB_FRONTEND_VISUAL_CONTRACT_V1 — implementation
+   SAME DESIGN LANGUAGE AS V6, NOT A PIXEL CLONE (§12).
+   Every token below is inherited from the V6 visual design system and was
+   verified against the V6 actual implementation (VC-E01 / VC-E03).
+   No V6 business content is carried here (§13).
+*/
+:root {
+  --bg:#f3f4f6; --card:#fff; --bd:rgba(0,0,0,.07); --text:#111827; --red:#dc2626;
+  --green:#059669; --blue:#2563eb; --amber:#d97706; --purple:#7c3aed; --muted:#6b7280;
+  --weak:#9ca3af; --line:#e5e7eb; --shadow:0 1px 4px rgba(0,0,0,.06),0 0 0 .5px rgba(0,0,0,.04);
+  --light-green:#d1fae5; --light-amber:#fef3c7; --light-red:#fee2e2; --light-blue:#dbeafe;
+  --light-purple:#ede9fe; --input-bg:#f9fafb; --selector-bg:#f8f5ff; --selector-bd:#e9d5ff;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden;background:var(--bg)}
+body{min-height:100vh;padding:16px;overflow-x:hidden;background:var(--bg);color:var(--text);
+  font-family:'Inter','PingFang SC','Microsoft YaHei',-apple-system,sans-serif;
+  font-size:16px;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+button{color:inherit}
+[hidden]{display:none!important}
+button:focus-visible,select:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+
+h1{font-size:20px;font-weight:700;letter-spacing:-.2px}
+.card{position:relative;width:100%;margin-bottom:12px;padding:16px;overflow:hidden;
+  border:.5px solid var(--bd);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:700;color:var(--text)}
+.card-sub{font-size:11px;color:var(--weak);margin-top:3px}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.row .k{font-size:11px;color:var(--muted)}
+.row .v{font-size:13px;font-variant-numeric:tabular-nums}
+
+/* Hero — fixed height prevents layout shift (VC-B07) */
+.score-hero{position:relative;height:290.5px;margin-bottom:16px;padding:20px;overflow:hidden;
+  border:.5px solid var(--bd);border-radius:16px;background:var(--card);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;justify-content:center}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.model-badge{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--light-purple);
+  color:var(--purple);font-size:17px;font-weight:700;line-height:1.2;
+  font-size:clamp(10px,3.2vw,17px);max-width:100%;overflow-wrap:anywhere}
+.hero-label{font-size:13px;color:var(--muted)}
+.hero-score{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:72px;font-weight:700;
+  line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.hero-unit{font-size:13px;color:var(--weak);margin-left:4px}
+.hero-tone-low{color:var(--red)!important}
+.hero-tone-middle{color:var(--amber)!important}
+.hero-tone-high{color:var(--green)!important}
+.hero-tone-unavailable{color:var(--weak)!important}
+.scale-track{position:relative;height:8px;margin-top:14px;overflow:hidden;border-radius:99px;
+  background:var(--line)}
+.scale-fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--purple)}
+.hero-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}
+.hero-meta>div{min-width:0;padding:8px 9px;border:.5px solid var(--bd);border-radius:10px;
+  background:var(--input-bg)}
+.hero-meta .k{display:block;font-size:10px;color:var(--weak)}
+.hero-meta .v{display:block;font-size:12px;font-variant-numeric:tabular-nums;margin-top:2px}
+
+/* Pills / states */
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;
+  white-space:nowrap}
+.pill-ok{background:var(--light-green);color:var(--green)}
+.pill-warn{background:var(--light-amber);color:var(--amber)}
+.pill-err{background:var(--light-red);color:var(--red)}
+.pill-neutral{background:var(--input-bg);color:var(--muted)}
+.pill-info{background:var(--light-blue);color:var(--blue)}
+
+.banner{margin-bottom:12px;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.5}
+.banner-warn{background:var(--light-amber);color:var(--amber)}
+.banner-err{background:var(--light-red);color:var(--red)}
+.banner-neutral{background:var(--input-bg);color:var(--muted)}
+
+/* KPI grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.kpi-card{min-width:0;overflow:hidden;padding:14px;border:.5px solid var(--bd);border-radius:12px;
+  background:var(--card);box-shadow:var(--shadow)}
+.kpi-name{font-size:11px;color:var(--muted);overflow-wrap:anywhere;word-break:break-word}
+.kpi-value{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:700;
+  margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi-max{font-size:10px;color:var(--weak);margin-top:2px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--card);
+  font-size:11px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 5px;border-bottom:.5px solid var(--line);text-align:right;
+  overflow-wrap:anywhere;word-break:break-word;min-width:0}
+th:first-child,td:first-child{text-align:left}
+th{font-size:10px;color:var(--weak);font-weight:600}
+.table-scroll{overflow-x:auto;margin-top:8px}
+.table-scroll table{min-width:520px}
+.td-name{font-size:11px}
+.td-sub{font-size:8px;color:var(--weak)}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.weak{color:var(--weak)}
+.glyph{color:var(--weak)}
+
+/* History selector */
+.selector{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;
+  border:1px solid var(--selector-bd);border-radius:10px;background:var(--selector-bg)}
+.selector select,.selector button{padding:6px 10px;border:1px solid var(--selector-bd);
+  border-radius:8px;background:var(--card);font-size:12px}
+.selector .hint{font-size:11px;color:var(--muted)}
+
+/* Loading skeleton */
+.skeleton{border-radius:8px;background:linear-gradient(90deg,#eef0f3 25%,#f6f7f9 37%,#eef0f3 63%);
+  background-size:400% 100%;animation:sk 1.2s ease-in-out infinite}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+
+footer{margin-top:18px;padding-bottom:12px;font-size:10px;color:var(--weak);line-height:1.6}
+
+/* Responsive — breakpoints inherited from V6 (VC-H01..H05) */
+@media(max-width:860px){
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .card{padding:12px}
+  .score-hero{padding:14px}
+  .hero-score{font-size:64px}
+  table{font-size:10px}
+}
+@media(max-width:479px){
+  body{padding:10px}
+  .hero-score{font-size:62px}
+  .hero-meta{grid-template-columns:minmax(0,1fr)}
+  .kpi-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
