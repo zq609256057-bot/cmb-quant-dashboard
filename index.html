@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>银行量化研究看板 · CMB_SCORE_MODEL_V1_1</title>
+<title>招商银行量化研究看板 · 600036.SH</title>
 <meta name="description" content="招商银行（600036.SH）量化评分研究看板 · CMB_SCORE_MODEL_V1_1 · Frontend V2">
 <link rel="stylesheet" href="assets/app.css">
 </head>
@@ -16,11 +16,9 @@
 <div class="topbar" data-section="A_STATUS">
   <div class="left">
     <span class="badge" id="top-bank">—</span>
-    <span class="badge mono" id="top-model">—</span>
     <span class="badge mono" id="top-date">—</span>
   </div>
   <div class="right">
-    <span class="badge mono" id="top-frontend-version">FRONTEND_VERSION</span>
     <span class="hint" id="top-updated">—</span>
   </div>
 </div>
@@ -36,14 +34,14 @@
     </div>
   </div>
   <div class="hint" style="margin-top:8px">
-    仅展示已通过数据可用性 / PIT / 阈值 / 历史 / 校验的银行；未接入银行不显示正式评分，不伪造数据。
+    仅展示已完成历史与数据校验的银行；未完成接入的银行不展示评分，也不使用估算值代替。
   </div>
 </section>
 
 <!-- C. 模型 / 日期入口 -->
 <section class="card" data-section="C_ENTRY">
   <div class="card-title"><span class="ord">C</span>模型与交易日入口</div>
-  <div class="card-subtitle">切换交易日只做读取与渲染；本页不执行任何评分计算。</div>
+  <div class="card-subtitle">切换交易日即可查看该日评分明细；缺失的交易日不使用其他日期代替。</div>
   <div class="selector-controls">
     <select id="day-select" aria-label="交易日选择器"></select>
     <div>
@@ -53,32 +51,34 @@
   </div>
 </section>
 
-<!-- D. Hero：基础评分 -->
+<!-- D. Hero：综合值博率基础评分 -->
 <section class="score-hero" id="hero" data-section="D_HERO" data-component="HeroScore">
   <div class="hero-top">
-    <span class="badge" id="hero-badge">—</span>
-    <span class="hero-label">评分日 <span id="hero-date">—</span></span>
+    <span class="hero-bank" id="hero-bank">—</span>
+    <span class="hero-code" id="hero-code">—</span>
+    <span class="hero-label">评分日期 <span id="hero-date">—</span></span>
   </div>
-  <h2 id="hero-title">基础评分（Base Score）</h2>
+  <h2 id="hero-title">综合值博率基础评分</h2>
   <div class="hero-value"><span id="hero-score" class="score-big score-tone-text-unavailable">—</span><span class="hero-unit">/ 100</span></div>
   <div class="verdict-pill"><span class="verdict-dot"></span><b id="hero-verdict">—</b></div>
   <div class="scale-track"><div class="scale-fill" id="hero-fill" style="width:0%"></div></div>
   <div class="scale-labels"><span>0</span><span>30</span><span>45</span><span>60</span><span>70</span><span>85</span><span>100</span></div>
-  <div class="hero-meta" id="hero-meta"></div>
-  <div id="base-final-note" class="banner banner-warn" hidden></div>
+  <!-- BASE ≠ FINAL is a machine-readable semantic marker: the base score is
+       never the final score.  The user-visible wording is Chinese (§Fix 04/05). -->
+  <div class="hero-meta hero-stats" id="hero-stats" data-semantic="BASE ≠ FINAL"></div>
 </section>
 
 <!-- E. 5 大维度 KPI -->
 <section class="card" data-section="E_DIMENSION_KPI">
   <div class="card-title"><span class="ord">E</span>五大维度 KPI</div>
-  <div class="card-subtitle">维度得分由本地引擎计算后发布；颜色按 score / max_score 统一判定。</div>
+  <div class="card-subtitle">每个维度按自身满分归一化；颜色随得分水平变化。</div>
   <div id="dim-kpi" class="kpi-grid"></div>
 </section>
 
 <!-- F. ① 评分分解 -->
 <section class="card" data-section="F_SCORE_DECOMPOSITION">
   <div class="card-title"><span class="ord">①</span>评分分解</div>
-  <div class="card-subtitle">100 分制按 5 大维度分解；每个维度条按自身满分归一化。</div>
+  <div class="card-subtitle">100 分制按 5 大维度分解。</div>
   <div id="decomp"></div>
 </section>
 
@@ -88,44 +88,33 @@
 <!-- L. ⑦ 综合研判 -->
 <section class="card" data-section="L_JUDGEMENT">
   <div class="card-title"><span class="ord">⑦</span>综合研判</div>
-  <div class="card-subtitle">主要正向因素 · 主要风险因素 · 综合研判（本地确定性逻辑生成，页面只渲染）</div>
+  <div class="card-subtitle">主要正向因素 · 主要风险因素 · 综合研判</div>
   <div id="judgement"></div>
 </section>
 
 <!-- M. ⑧ 评分信号共振 -->
 <section class="card" data-section="M_RESONANCE">
   <div class="card-title"><span class="ord">⑧</span>评分信号共振</div>
-  <div class="card-subtitle">评分区间研究展示 · 非交易指令</div>
+  <div class="card-subtitle">六档评分区间研究展示 · 非交易指令</div>
   <div id="resonance"></div>
 </section>
 
 <!-- N. ⑨ 历史评分回测 -->
 <section class="card" data-section="N_HISTORY">
   <div class="card-title"><span class="ord">⑨</span>历史评分回测</div>
-  <div class="card-subtitle">Fixed V1.1 正式评分历史回放 · 研究用动态口径（SHADOW · RESEARCH ONLY）对照 · 不是交易收益率回测</div>
+  <div class="card-subtitle">正式评分历史回放 · 研究用动态口径对照 · 不是交易收益率回测</div>
   <div id="history"></div>
 </section>
 
 <!-- O. ⑩ 动态阈值研究 -->
 <section class="card" data-section="O_THRESHOLD">
   <div class="card-title"><span class="ord">⑩</span>动态阈值研究</div>
-  <div class="card-subtitle">研究用动态阈值（SHADOW）PIT Walk-Forward 演变 · RESEARCH ONLY · 不进入正式评分</div>
+  <div class="card-subtitle">研究用动态阈值的历史演变路径 · 仅研究用途 · 不进入正式评分</div>
   <div id="threshold"></div>
 </section>
 
-<!-- P. Runtime / Data / Model 状态 -->
-<section class="card" data-section="P_RUNTIME">
-  <div class="card-title"><span class="ord">P</span>运行时 / 数据 / 模型状态</div>
-  <div class="card-subtitle">GitHub 仅为展示镜像；本地为唯一事实来源。</div>
-  <div id="health-banner" class="banner banner-warn" hidden></div>
-  <div style="overflow-x:auto"><table id="runtime-table" class="runtime-table"></table></div>
-</section>
-
 <footer>
-  模型 <strong id="footer-model">CMB_SCORE_MODEL_V1_1</strong> · 标的 <span id="footer-subject">600036.SH</span> ·
-  <span id="footer-version">CMB_FRONTEND_V2</span><br>
-  评分由本地 Production Score Engine 计算后发布，本页面不执行任何评分计算。<br>
-  本页仅用于研究与展示，不构成投资建议。
+  本页面仅用于研究展示，不构成投资建议。
 </footer>
 
 </div>
