@@ -1,0 +1,62 @@
+{
+  "active_count": 1,
+  "artifact": "CMB_BANK_FRONTEND_REGISTRY_V1",
+  "banks": [
+    {
+      "bank_id": "600036.SH",
+      "current_data_path": "data/banks/600036/current.json",
+      "data_dir": "600036",
+      "framework": "BANK_SCORE_FRAMEWORK_V1",
+      "history_path": "data/banks/600036/history/",
+      "latest_score_date": "2026-09-24",
+      "model_id": "CMB_SCORE_MODEL_V1_1",
+      "model_version": "V1_1",
+      "name_cn": "招商银行",
+      "name_en": "China Merchants Bank",
+      "no_dynamic_metrics": [
+        "F02",
+        "F03",
+        "M01",
+        "P06",
+        "T02"
+      ],
+      "profile_id": "CMB_PROFILE",
+      "shadow_path": "data/banks/600036/history/shadow_score.json",
+      "status": "ACTIVE",
+      "supported_since": "2021-03-22",
+      "threshold_metrics": [
+        {
+          "algorithm": "PIT_TRAILING_10Y_EXPANDING_MIN_20Q_P10_P80_LINEAR_INTERPOLATION",
+          "metric_id": "P01",
+          "name": "净息差 NIM",
+          "status": "ALGORITHM_FROZEN_IN_PHASE1"
+        },
+        {
+          "algorithm": "MEDIAN_MAD",
+          "metric_id": "P02",
+          "name": "年化平均总资产收益率 ROAA",
+          "status": "ALGORITHM_FROZEN"
+        },
+        {
+          "algorithm": "EXPANDING_P10_P90",
+          "metric_id": "P03",
+          "name": "年化加权平均净资产收益率 ROAE",
+          "status": "ALGORITHM_FROZEN"
+        },
+        {
+          "algorithm": "ROLLING_P10_P80",
+          "metric_id": "V02",
+          "name": "股息率-国债利差",
+          "status": "ALGORITHM_FROZEN"
+        }
+      ],
+      "ticker": "600036"
+    }
+  ],
+  "color_engine": "CMB_SCORE_COLOR_ENGINE_CONTRACT_V1",
+  "contract": "CMB_BANK_FRONTEND_REGISTRY_CONTRACT_V1",
+  "frontend_version": "CMB_FRONTEND_V2",
+  "generated_at": "2026-09-27T13:25:32.372357+00:00",
+  "note": "当前仅招商银行 600036.SH 通过数据可用性 / PIT / 阈值 / 历史 / 校验。其余银行只做架构预留，不显示任何正式评分（§10 禁止伪造）。",
+  "total_count": 1
+}
