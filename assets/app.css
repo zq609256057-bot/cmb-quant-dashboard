@@ -43,7 +43,7 @@
 /* =====================================================================
  * V6 WATERMARK — SOURCE_V6_ACTUAL_IMPLEMENTATION
  *   V6 styles.css :: .card::after,.score-hero::after{
- *     content:"公众号@纳指红利养老之路"; position:absolute; left:52%; top:66%;
+ *     content:"<V6_SOURCE_STRING_NOT_REUSED>"; position:absolute; left:52%; top:66%;
  *     z-index:99; transform:translate(-50%,-50%) rotate(-45deg);
  *     color:rgba(100,100,100,.13); font-size:20px; font-weight:600;
  *     line-height:1; letter-spacing:.4px; white-space:nowrap;
