@@ -211,6 +211,10 @@
     var finalText = (c.final_score_status === "FULLY_AVAILABLE" && c.final_score !== null &&
                      c.final_score !== undefined)
       ? fmt(c.final_score, SCORE_DECIMALS) : GLYPH;
+    // BASE ≠ FINAL is a machine-readable semantic marker (not user-facing text):
+    // the big hero number is the BASE score, never the FINAL score.  It must be
+    // re-asserted here because the stats block is rendered from JS.
+    el("hero-stats").setAttribute("data-semantic", "BASE ≠ FINAL");
     el("hero-stats").innerHTML =
       statBox("基础评分的得分", fmt(c.base_score, SCORE_DECIMALS), tone) +
       statBox("Risk Overlay 的得分", overlayText, "unavailable") +
