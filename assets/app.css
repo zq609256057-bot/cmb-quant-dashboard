@@ -41,6 +41,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{overflow-x:hidden;background:var(--bg);scroll-behavior:smooth}
+h1{font-size:20px;font-weight:700}
 body{min-height:100vh;padding:16px;overflow-x:hidden;background:var(--bg);color:var(--text);
   font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   -webkit-font-smoothing:antialiased}
@@ -51,8 +52,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .wrap{max-width:1320px;margin:0 auto}
 .card{position:relative;width:100%;margin-bottom:12px;padding:16px;overflow:hidden;
   border:.5px solid var(--bd);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
-.card-title{margin-bottom:12px;padding-left:10px;border-left:3px solid var(--purple);
-  font-size:13px;font-weight:700;line-height:1.2}
+.card-title{font-size:13px;font-weight:700;line-height:1.2;
+  margin-bottom:12px;padding-left:10px;border-left:3px solid var(--purple)}
 .card-title .ord{margin-right:6px;color:var(--purple)}
 .card-subtitle{margin:-6px 0 12px 13px;color:var(--muted);font-size:10px;line-height:1.5}
 .hint{color:var(--muted);font-size:10px;line-height:1.5}
@@ -79,13 +80,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .selector-current{margin-top:5px;color:#5b21b6;font-size:10px;font-weight:700}
 
 /* ---------- D. hero ---------- */
-.score-hero{position:relative;margin-bottom:16px;padding:20px;overflow:hidden;
+/* V6 parity: hero card height 290.5px — min-height so the richer CMB hero can never clip. */
+.score-hero{position:relative;min-height:290.5px;margin-bottom:16px;padding:20px;overflow:hidden;
   border:.5px solid var(--bd);border-radius:16px;background:var(--card);box-shadow:var(--shadow);text-align:center}
 .hero-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
 .hero-label{color:var(--muted);font-size:12px;font-weight:600}
 .score-hero h2{color:var(--muted);font-size:17.5px;font-weight:700}
 .hero-value{display:flex;align-items:baseline;justify-content:center;gap:4px;margin:5px 0 4px}
-.score-big{font:700 62px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+/* V6 parity: .score-big{font:700 72px/1 monospace;font-variant-numeric:tabular-nums} */
+.score-big{font-size:72px;font-weight:700;line-height:1;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 .hero-unit{color:var(--muted);font-size:16px;font-weight:600}
 .verdict-pill{display:inline-flex;align-items:center;gap:6px;margin:2px auto 7px;padding:6px 16px;
   border-radius:20px;background:var(--light-amber);color:#92400e;font-size:13px;font-weight:600}
@@ -96,6 +100,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   transition:width .15s ease}
 .scale-labels{display:flex;justify-content:space-between;max-width:760px;margin:0 auto;
   color:var(--weak);font-size:9px}
+.hero-tone-low{color:var(--red)!important}
+.hero-tone-middle{color:var(--amber)!important}
+.hero-tone-high{color:var(--green)!important}
+.hero-tone-unavailable{color:var(--weak)!important}
 .score-tone-text-low{color:var(--red)!important}
 .score-tone-text-middle{color:var(--amber)!important}
 .score-tone-text-high{color:var(--green)!important}
@@ -109,7 +117,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .hero-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-width:760px;margin:12px auto 0}
 .hero-meta>div{min-width:0;padding:7px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg)}
 .hero-meta .k{display:block;color:var(--muted);font-size:9px}
-.hero-meta .v{display:block;margin-top:1px;font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.hero-meta .v{display:block;margin-top:1px;font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
+  overflow-wrap:anywhere;word-break:break-word}
 
 /* ---------- E. KPI ---------- */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -120,7 +129,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .kpi-card.score-tone-high{border-left-color:var(--green)}
 .kpi-card.score-tone-unavailable{border-left-color:var(--weak)}
 .kpi-label{color:var(--muted);font-size:11px;font-weight:500}
-.kpi-value{display:block;margin-top:4px;font:700 26px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.kpi-value{display:block;margin-top:4px;font-size:26px;font-weight:700;line-height:1.1;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .kpi-max{display:block;margin-top:3px;color:var(--weak);font-size:10px}
 .glyph{color:var(--weak)}
 
@@ -133,7 +143,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .score-row-label{font-size:12px;font-weight:600;min-width:0}
 .score-row-label .mid{color:var(--weak);font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
 .score-row-score{flex:0 0 auto;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
-.score-row-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;color:var(--weak);font-size:9px}
+.score-row-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;color:var(--weak);font-size:8px}
 .score-row-meta .raw{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
 .thr-chip{display:inline-block;padding:1px 6px;border-radius:6px;background:var(--input-bg);
   border:.5px solid var(--line);color:var(--muted)}
@@ -239,9 +249,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}
 .muted{color:var(--muted)}
 .pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;white-space:nowrap}
-.pill-ok{color:var(--green);background:var(--light-green)}
-.pill-warn{color:#92400e;background:var(--light-amber)}
-.pill-err{color:#991b1b;background:var(--light-red)}
+.pill-ok{background:var(--light-green);color:var(--green)}
+.pill-warn{background:var(--light-amber);color:var(--amber)}
+.pill-err{background:var(--light-red);color:var(--red)}
 .pill-neutral{color:var(--muted);background:var(--input-bg)}
 .pill-info{color:#1e40af;background:var(--light-blue)}
 .banner{margin:0 0 12px;padding:10px 12px;border-radius:10px;font-size:11px;line-height:1.6}
@@ -283,9 +293,10 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
   .signal-table th,.signal-table td{font-size:10px;padding:5px}
 }
 @media(max-width:479px){
+.kpi-value{font-size:clamp(10px,3.2vw,17px);line-height:1.25;overflow-wrap:anywhere}
   body{padding:10px}
   .card{padding:12px}
-  .score-big{font-size:40px}
+  .score-big{font-size:62px}   /* V6 @479 parity */
   .index-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .history-summary{grid-template-columns:minmax(0,1fr)}
   .card-title{white-space:normal}

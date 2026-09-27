@@ -18,11 +18,14 @@
  *                        (V6 styles.css .scale-fill)
  *   text tone colours <- SOURCE_V6_ACTUAL_IMPLEMENTATION
  *                        (V6 styles.css .score-tone-text-*)
+ * Boundary vocabulary (V6): the browser may only READ the published
+ * artifacts — READ -> FORMAT -> RENDER.  It MUST NOT compute a score.
  * ===================================================================== */
 (function () {
   "use strict";
 
   var GLYPH = "—";
+  var SCORE_DECIMALS = 2;   // canonical score decimals (V6/V1 parity)
   var REGISTRY = "data/bank_registry.json";
 
   var state = {
@@ -48,7 +51,7 @@
   /* ---------------- formatting ---------------- */
   function fmt(v, d) {
     if (v === null || v === undefined || v === "" || !isFinite(Number(v))) return GLYPH;
-    var s = Number(v).toFixed(d === undefined ? 2 : d);
+    var s = Number(v).toFixed(d === undefined ? SCORE_DECIMALS : d);
     s = s.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
     return s;
   }
@@ -176,8 +179,8 @@
     el("hero-date").textContent = c.score_date || GLYPH;
     el("hero-title").textContent = "基础评分（Base Score · 不是 Final Score）";
     var s = el("hero-score");
-    s.className = "score-big " + toneTextCls(tone);
-    s.textContent = (c.base_score === null || c.base_score === undefined) ? GLYPH : fmt(c.base_score, 2);
+    s.className = "score-big " + toneTextCls(tone) + " hero-tone-" + tone;
+    s.textContent = (c.base_score === null || c.base_score === undefined) ? GLYPH : fmt(c.base_score, SCORE_DECIMALS);
     var sd = (c.signal_resonance && c.signal_resonance.base_signal) || {};
     el("hero-verdict").textContent = (c.base_score === null || c.base_score === undefined)
       ? "NOT_FULLY_AVAILABLE" : (sd.label || GLYPH);
@@ -373,7 +376,7 @@
           '<label>End Date<input type="date" id="hist-end"></label>' +
         "</div>" +
         '<div class="index-tabs" id="hist-mode" style="min-width:300px">' +
-          [["FIXED", "Fixed V1.1"], ["SHADOW", "Shadow 研究"], ["COMPARE", "Fixed+Shadow"]]
+          [["FIXED", "Fixed V1.1"], ["SHADOW", "动态研究口径（非生产）"], ["COMPARE", "Fixed + 研究口径"]]
             .map(function (p) {
               return '<button data-mode="' + p[0] + '"' +
                 (p[0] === state.histMode ? ' class="active"' : "") + ">" + p[1] + "</button>";
@@ -385,7 +388,7 @@
       '<div class="chart-scroll"><div class="chart-shell"><canvas id="hist-canvas" class="score-canvas"></canvas>' +
         '<div id="hist-tip" class="hint" style="margin-top:6px"></div></div></div>' +
       '<div class="chart-legend"><span><i class="lg-fixed"></i>Fixed V1.1 正式评分</span>' +
-        '<span><i class="lg-shadow"></i>Shadow 动态研究（RESEARCH ONLY）</span>' +
+        '<span><i class="lg-shadow"></i>研究用动态口径（SHADOW · RESEARCH ONLY · 非生产口径）</span>' +
         '<span><i class="lg-price"></i>股价（右轴）</span></div>' +
       '<div class="history-summary" id="hist-summary"></div>';
     bindHistoryControls();
@@ -482,7 +485,7 @@
       price = dates.map(function (d) { return pmap[d] === undefined ? null : pmap[d]; });
     }
     var showFixed = state.histMode !== "SHADOW";
-    var showShadow = state.histMode !== "FIXED" && shadow;
+    var showAlt = state.histMode !== "FIXED" && shadow;
 
     el("hist-note").textContent =
       "区间 " + dates[0] + " → " + dates[dates.length - 1] + " · " + dates.length +
@@ -491,14 +494,14 @@
     var minS = Infinity, maxS = -Infinity;
     function acc(v) { if (v !== null && isFinite(v)) { if (v < minS) minS = v; if (v > maxS) maxS = v; } }
     if (showFixed) fixed.forEach(acc);
-    if (showShadow) shadow.forEach(acc);
+    if (showAlt) shadow.forEach(acc);
     if (!isFinite(minS)) { minS = 0; maxS = 100; }
     var pad = Math.max(0.6, (maxS - minS) * 0.12);
     minS -= pad; maxS += pad;
 
     drawSeries("hist-canvas", dates, [
       { data: showFixed ? fixed : null, color: "#7c3aed", width: 2, dash: null },
-      { data: showShadow ? shadow : null, color: "#2563eb", width: 2, dash: [6, 4] }
+      { data: showAlt ? shadow : null, color: "#2563eb", width: 2, dash: [6, 4] }
     ], price, minS, maxS);
 
     var lastF = fixed[fixed.length - 1];
@@ -508,7 +511,7 @@
       sumRow("区间起始 Fixed", fmt(firstF, 2)) +
       sumRow("区间最新 Fixed", fmt(lastF, 2)) +
       sumRow("区间变动", (isFinite(lastF) && isFinite(firstF)) ? fmt(lastF - firstF, 2) : GLYPH) +
-      sumRow("Shadow 最新（研究）", state.histMode === "FIXED" ? "未开启" : fmt(lastS, 2));
+      sumRow("研究用动态口径最新（SHADOW · 非生产）", state.histMode === "FIXED" ? "未开启" : fmt(lastS, 2));
   }
   function sumRow(k, v) {
     return '<div><small>' + esc(k) + "</small><strong>" + esc(v) + "</strong></div>";
