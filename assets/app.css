@@ -50,11 +50,14 @@
  *     pointer-events:none; user-select:none }
  *   Every visual property below is byte-identical to V6 (font-size, weight,
  *   colour/alpha, rotation, letter-spacing, line-height, position, z-index,
- *   pointer-events, user-select, nowrap).  ONLY the content string is
- *   CMB-adapted (CMB_SPECIFIC_ADAPTATION) — V6 branding is never reused.
+ *   pointer-events, user-select, nowrap).
+ *
+ * FIX-A / S45-S46: the user has now authorised the ONE production watermark
+ * string below.  It is the ONLY runtime watermark on the page; the previous
+ * CMB study-subject watermark is fully removed (no residue anywhere).
  * ===================================================================== */
 .card::after,.score-hero::after{
-  content:"招商银行量化研究 · 600036.SH";
+  content:"公众号@纳指红利养老之路";
   position:absolute;left:52%;top:66%;z-index:99;
   transform:translate(-50%,-50%) rotate(-45deg);
   color:rgba(100,100,100,.13);
@@ -146,18 +149,38 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .hero-stats .k{font-size:10px}
 .hero-stats .v{margin-top:3px;font-size:19px;line-height:1.2}
 
-/* ---------- E. KPI ---------- */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+/* ---------- E. KPI (FIX-B: V6 typography, 5-card CMB adaptation) ----------
+ * V6 production evidence (frontend/src/styles.css):
+ *   .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+ *   .kpi-card{padding:14px;border:.5px solid var(--bd);border-left:3px solid var(--purple);
+ *             border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+ *   .kpi-label{color:var(--muted);font-size:11px;font-weight:500}
+ *   .kpi-value{display:block;margin-top:4px;font:700 26px/1.1 monospace;
+ *              font-variant-numeric:tabular-nums}
+ *   .kpi-sub{margin-top:3px;color:var(--muted);font-size:11px}
+ *   @media(max-width:479px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+ * CMB_SPECIFIC_ADAPTATION: 5 dimensions instead of 4 -> 5 equal columns on
+ * desktop, 3+2 on tablet, 2 on mobile.  No horizontal overflow at any width.
+ */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
 .kpi-card{min-width:0;padding:14px;overflow:hidden;border:.5px solid var(--bd);
   border-left:3px solid var(--purple);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
 .kpi-card.score-tone-low{border-left-color:var(--red)}
 .kpi-card.score-tone-middle{border-left-color:var(--amber)}
 .kpi-card.score-tone-high{border-left-color:var(--green)}
 .kpi-card.score-tone-unavailable{border-left-color:var(--weak)}
+/* FIX-B / S49: value is PRIMARY (26px 700 mono tabular), "/ 26" is de-emphasised,
+ * the score rate is strictly secondary.  "76.54%" must never outrank "20.42". */
 .kpi-label{color:var(--muted);font-size:11px;font-weight:500}
-.kpi-value{display:block;margin-top:4px;font-size:26px;font-weight:700;line-height:1.1;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.kpi-max{display:block;margin-top:3px;color:var(--weak);font-size:10px}
+.kpi-value{display:block;margin-top:4px;font:700 26px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums}
+.kpi-max{display:inline-block;margin-left:4px;color:var(--weak);font-size:12px;font-weight:400}
+.kpi-sub{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:400}
+.kpi-rate{display:block;margin-top:2px;color:var(--weak);font-size:11px;font-weight:400}
+.kpi-bar{margin-top:8px}
+.metric-display{display:inline-block;padding:1px 7px;border-radius:8px;
+  background:var(--line);color:var(--text);font-size:11px}
+.metric-display b{font-weight:600;font-variant-numeric:tabular-nums}
 .glyph{color:var(--weak)}
 
 /* ---------- F~K. score rows / progress ---------- */
@@ -306,9 +329,44 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
 .risk-note strong{display:block;color:#92400e;font-size:10px}
 .risk-note span{display:block;margin-top:3px;color:#78350f;font-size:10px;line-height:1.55}
 
+/* ---------- A0. Header (FIX-C) — V6 dashboard-header structure ----------
+ * V6: .dashboard-header{display:flex;align-items:flex-start;min-height:72px;
+ *     margin-bottom:20px;padding:0 4px}   .dashboard-header h1{font-size:20px;font-weight:700}
+ *     .header-badge{padding:3px 10px;border-radius:20px;background:var(--light-amber);
+ *     color:#92400e;font:600 11px/1.4 monospace}
+ * Independent of the hero, so the hero shows the score and nothing else (§55).
+ */
+.dashboard-header{display:flex;align-items:flex-start;min-height:72px;margin-bottom:20px;padding:0 4px}
+.dashboard-header h1{font-size:20px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.header-content{min-width:0;flex:1 1 auto}
+.header-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px;
+  color:var(--muted);font-size:11px}
+.header-badge{padding:3px 10px;border-radius:20px;background:var(--light-amber);color:#92400e;
+  font:600 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.underlying{margin-top:4px;color:var(--weak);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+
+/* ---------- C. hierarchical date selector (FIX-D) ---------- */
+.date-selector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.date-field{min-width:0}
+.date-field label{display:block;margin-bottom:3px;color:var(--muted);font-size:10px;font-weight:500}
+.date-field select{width:100%;min-width:0;padding:6px 8px;border:.5px solid var(--bd);
+  border-radius:8px;background:var(--card);color:var(--text);font-size:12px}
+.date-nav{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.btn-mini{padding:5px 9px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg);
+  color:var(--text);font-size:11px;white-space:nowrap}
+.btn-mini:hover{background:var(--line)}
+.btn-mini:disabled{opacity:.45;cursor:not-allowed}
+.date-native{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.date-native label{color:var(--muted);font-size:10px}
+.date-native input{padding:5px 8px;border:.5px solid var(--bd);border-radius:8px;
+  background:var(--card);color:var(--text);font-size:12px}
+
 /* ---------- responsive (V6 breakpoints + V2 additions) ---------- */
 @media(max-width:1024px){
-  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* 5 KPI cards: 3 + 2 instead of 5 equal columns (§50). */
+  .kpi-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .kpi-grid>.kpi-card{grid-column:span 2}
+  .kpi-grid>.kpi-card:nth-child(4),.kpi-grid>.kpi-card:nth-child(5){grid-column:span 3}
   .hero-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
   .resonance-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .threshold-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -323,8 +381,13 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
   .score-big{font-size:48px}
   .selector-controls{grid-template-columns:minmax(0,1fr)}
 }
+@media(max-width:720px){
+  .date-selector{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media(max-width:560px){
-  .kpi-grid{grid-template-columns:minmax(0,1fr)}
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-grid>.kpi-card{grid-column:span 1}
+  .kpi-grid>.kpi-card:nth-child(4),.kpi-grid>.kpi-card:nth-child(5){grid-column:span 1}
   .hero-meta{grid-template-columns:minmax(0,1fr)}
   .resonance-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .threshold-grid{grid-template-columns:minmax(0,1fr)}
@@ -333,7 +396,8 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
   .signal-table th,.signal-table td{font-size:10px;padding:5px}
 }
 @media(max-width:479px){
-.kpi-value{font-size:clamp(10px,3.2vw,17px);line-height:1.25;overflow-wrap:anywhere}
+  /* FIX-B: the KPI value keeps the V6 26px/700 monospace primary visual at
+     every width; only the grid collapses to 2 columns. */
   body{padding:10px}
   .card{padding:12px}
   .score-big{font-size:62px}   /* V6 @479 parity */

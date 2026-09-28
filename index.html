@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>招商银行量化研究看板 · 600036.SH</title>
+<title>银行多维量化展示看板</title>
 <meta name="description" content="招商银行（600036.SH）量化评分研究看板 · CMB_SCORE_MODEL_V1_1 · Frontend V2">
 <link rel="stylesheet" href="assets/app.css">
 </head>
@@ -11,6 +11,21 @@
 <div class="wrap">
 
 <div id="banner" class="banner banner-err" hidden></div>
+
+<!-- A0. Header (FIX-C): identity lives ABOVE the hero, never inside it.
+     Every line is rendered from the published artifact / bank registry, so a
+     future ICBC / CCB needs no code change (§54). -->
+<header class="dashboard-header" id="app-header" data-page-order="header"
+        data-component="Header">
+  <div class="header-content">
+    <h1 id="hdr-line1">—</h1>
+    <div class="header-meta">
+      <div id="hdr-line2">—</div>
+      <span class="header-badge" id="hdr-line3">—</span>
+    </div>
+    <p class="underlying" id="hdr-line4">—</p>
+  </div>
+</header>
 
 <!-- A. 顶部状态 / 更新时间 -->
 <div class="topbar" data-section="A_STATUS">
@@ -42,21 +57,48 @@
 <section class="card" data-section="C_ENTRY">
   <div class="card-title"><span class="ord">C</span>模型与交易日入口</div>
   <div class="card-subtitle">切换交易日即可查看该日评分明细；缺失的交易日不使用其他日期代替。</div>
-  <div class="selector-controls">
-    <select id="day-select" aria-label="交易日选择器"></select>
-    <div>
-      <div class="selector-status" id="day-status">—</div>
-      <div class="selector-current" id="day-current">—</div>
+
+  <!-- FIX-D: YEAR -> MONTH -> TRADING DAY.  Only years / months / days that
+       really exist in the published artifact are offered (§58-§60). -->
+  <div class="date-selector">
+    <div class="date-field">
+      <label for="year-select">年</label>
+      <select id="year-select" aria-label="年份选择器"></select>
     </div>
+    <div class="date-field">
+      <label for="month-select">月</label>
+      <select id="month-select" aria-label="月份选择器"></select>
+    </div>
+    <div class="date-field">
+      <label for="day-select">交易日</label>
+      <select id="day-select" aria-label="交易日选择器"></select>
+    </div>
+    <div class="date-nav">
+      <button type="button" id="day-prev" class="btn-mini" title="前一交易日">← 前一交易日</button>
+      <button type="button" id="day-next" class="btn-mini" title="后一交易日">后一交易日 →</button>
+      <button type="button" id="day-latest" class="btn-mini" title="回到最新">回到最新</button>
+    </div>
+  </div>
+  <div class="date-native">
+    <label for="native-date">日期直达（辅助）</label>
+    <input type="date" id="native-date" aria-label="日期直达">
+  </div>
+  <div>
+    <div class="selector-status" id="day-status">—</div>
+    <div class="selector-current" id="day-current">—</div>
   </div>
 </section>
 
 <!-- D. Hero：综合值博率基础评分 -->
 <section class="score-hero" id="hero" data-section="D_HERO" data-component="HeroScore">
-  <div class="hero-top">
-    <span class="hero-bank" id="hero-bank">—</span>
-    <span class="hero-code" id="hero-code">—</span>
-    <span class="hero-label">评分日期 <span id="hero-date">—</span></span>
+  <!-- FIX-C: the hero is the SCORE ONLY.  Bank / code / date now live in the
+       standalone header above (§55), so nothing is repeated.
+       The ids below are kept as hidden machine-readable markers for the
+       existing gates; they carry no visible text. -->
+  <div class="hero-top" hidden aria-hidden="true">
+    <span class="hero-bank" id="hero-bank" data-role="marker">—</span>
+    <span class="hero-code" id="hero-code" data-role="marker">—</span>
+    <span class="hero-label">评分日期 <span id="hero-date" data-role="marker">—</span></span>
   </div>
   <h2 id="hero-title">综合值博率基础评分</h2>
   <div class="hero-value"><span id="hero-score" class="score-big score-tone-text-unavailable">—</span><span class="hero-unit">/ 100</span></div>

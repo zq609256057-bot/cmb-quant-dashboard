@@ -56,7 +56,9 @@
     showPrice: true,
     thresholdMetric: null,
     histWindow: null,         // [{date, fixed, shadow, price}] for the drawn range
-    cursor: null              // crosshair index inside histWindow
+    cursor: null,             // crosshair index inside histWindow
+    dateTree: {},             // YEAR -> MONTH -> [trading days] (FIX-D, §58)
+    years: []                 // years that really exist in the artifact
   };
 
   function el(id) { return document.getElementById(id); }
@@ -67,6 +69,12 @@
     var s = Number(v).toFixed(d === undefined ? SCORE_DECIMALS : d);
     s = s.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
     return s;
+  }
+  /* V6 .kpi-value parity: the dimension score is always 2 fixed decimals
+     (「21.40」, not 「21.4」); the em dash still means "unavailable". */
+  function fmt2(v) {
+    if (v === null || v === undefined || v === "" || !isFinite(Number(v))) return GLYPH;
+    return Number(v).toFixed(2);
   }
   function pct(v) {
     if (v === null || v === undefined || !isFinite(Number(v))) return GLYPH;
@@ -163,21 +171,177 @@
     return active.length ? active[0] : null;
   }
 
-  /* ---------------- C. day selector (Fix 02) ---------------- */
-  function renderDaySelector(c) {
-    var days = (c && c.published_days) || [];
-    if (!days.length && c && c.score_date) days = [c.score_date];
-    state.days = days.slice().sort();
-    var sel = el("day-select");
-    // Newest first; only the newest day carries the 「最新」 suffix.
-    sel.innerHTML = state.days.slice().reverse().map(function (d) {
-      return '<option value="' + esc(d) + '">' + esc(d) +
-        (d === c.score_date ? "（最新）" : "") + "</option>";
+  /* ---------------- C. hierarchical day selector (FIX-D / §56-§62) -------
+     YEAR -> MONTH -> TRADING DAY.  Only years / months / days that really
+     exist in the published artifact are offered: nothing is synthesised and
+     no weekend / holiday is ever invented (§58-§60).  The native date input
+     stays as an AUXILIARY shortcut only (§61). */
+
+  /* The tree is published by the builder (build_current().date_tree).  When the
+     day view does not carry it (a lazily loaded year chunk) the tree already
+     cached from current.json is reused; as a last resort it is derived from the
+     published day list — still only from real published days. */
+  function treeOf(c) {
+    if (c && c.date_tree && Object.keys(c.date_tree).length) {
+      state.dateTree = c.date_tree;
+      return c.date_tree;
+    }
+    if (Object.keys(state.dateTree).length) return state.dateTree;
+    var t = {};
+    ((c && c.published_days) || []).forEach(function (d) {
+      var y = String(d).slice(0, 4), m = String(d).slice(5, 7);
+      (t[y] = t[y] || {})[m] = (t[y][m] || []).concat([d]);
+    });
+    state.dateTree = t;
+    return t;
+  }
+  function yearsOf(c, t) {
+    var ys = (c && c.years && c.years.length) ? c.years.slice() : Object.keys(t || {});
+    if (!ys.length) ys = Object.keys(t || {});
+    return ys.slice().sort();
+  }
+  function monthsOf(t, y) { return Object.keys(((t || {})[y]) || {}).sort(); }
+  function daysOf(t, y, m) { return ((((t || {})[y]) || {})[m] || []).slice().sort(); }
+  function fillSelect(sel, values, textOf, selected) {
+    if (!sel) return;
+    sel.innerHTML = values.map(function (v) {
+      return '<option value="' + esc(v) + '">' + esc(textOf(v)) + "</option>";
     }).join("");
-    sel.value = c.score_date || state.days[state.days.length - 1];
+    if (selected && values.indexOf(selected) >= 0) sel.value = selected;
+    else if (values.length) sel.value = values[values.length - 1];
+  }
+
+  function renderDaySelector(c) {
+    var t = treeOf(c);
+    var days = ((c && c.published_days) || []).slice().sort();
+    if (!days.length) {
+      Object.keys(t).sort().forEach(function (y) {
+        monthsOf(t, y).forEach(function (m) { days = days.concat(daysOf(t, y, m)); });
+      });
+      days.sort();
+    }
+    state.days = days;
+    var latest = days[days.length - 1] || "";
+    var cur = (c && c.score_date) || latest;
+    var ys = yearsOf(c, t);
+    if (!ys.length) { el("day-status").textContent = "无可用交易日"; return; }
+
+    var y = String(cur).slice(0, 4);
+    if (ys.indexOf(y) < 0) y = ys[ys.length - 1];
+    var ms = monthsOf(t, y);
+    if (!ms.length) ms = monthsOf(t, ys[ys.length - 1]);
+    var m = String(cur).slice(5, 7);
+    if (ms.indexOf(m) < 0) m = ms[ms.length - 1];
+    var ds = daysOf(t, y, m);
+    if (!ds.length) ds = [cur];
+
+    fillSelect(el("year-select"), ys, function (v) { return v + " 年"; }, y);
+    fillSelect(el("month-select"), ms, function (v) { return Number(v) + " 月"; }, m);
+    // Newest first inside the month; only the newest day carries 「最新」.
+    fillSelect(el("day-select"), ds.slice().reverse(), function (v) {
+      return v + (v === latest ? "（最新）" : "");
+    }, ds.indexOf(cur) >= 0 ? cur : ds[ds.length - 1]);
+
+    var nd = el("native-date");
+    if (nd) {
+      nd.min = days[0] || "";
+      nd.max = latest;
+      nd.value = cur;
+    }
+    var i = state.days.indexOf(cur);
     el("day-status").textContent = "可查询交易日 " + state.days.length + " 个 · 起始 " +
-      (state.days[0] || GLYPH) + " · 截止 " + (state.days[state.days.length - 1] || GLYPH);
-    el("day-current").textContent = "缺失的交易日不显示评分，不使用其他日期代替";
+      (state.days[0] || GLYPH) + " · 截止 " + (latest || GLYPH);
+    el("day-current").textContent =
+      "当前 " + y + " 年 " + Number(m) + " 月 · 该月 " + ds.length + " 个交易日" +
+      (i >= 0 ? " · 第 " + (i + 1) + " / " + state.days.length + " 个" : "") +
+      " · 缺失的交易日不显示评分，不使用其他日期代替";
+    if (el("day-prev")) el("day-prev").disabled = (i <= 0);
+    if (el("day-next")) el("day-next").disabled = (i < 0 || i >= state.days.length - 1);
+  }
+
+  function latestDay() { return state.days.length ? state.days[state.days.length - 1] : null; }
+  function siblingDay(dir) {
+    var cur = state.current && state.current.score_date;
+    if (!cur) return null;
+    var i = state.days.indexOf(cur);
+    if (i < 0) return null;
+    var j = i + dir;
+    return (j >= 0 && j < state.days.length) ? state.days[j] : null;
+  }
+  /* Every section is re-rendered from the day view (§63): Header / Hero /
+     5 KPI / 24 metrics / display values / judgement / resonance / interval /
+     Overlay / Final.  The browser only re-reads a pre-built year chunk. */
+  function goToDay(d) {
+    if (!d) return;
+    var c = state.current;
+    if (c && d === c.score_date) { renderAll(c); return; }
+    loadDay(d).then(function (x) {
+      renderAll(x);
+    }).catch(function () {
+      showError("所选交易日 " + d + " 没有可用快照；页面不使用其他日期代替。", "banner-neutral");
+    });
+  }
+  function goToYearMonth() {
+    var t = state.dateTree || {};
+    var y = el("year-select").value;
+    var ms = monthsOf(t, y);
+    if (!ms.length) return;
+    var m = el("month-select").value;
+    if (ms.indexOf(m) < 0) m = ms[ms.length - 1];
+    var ds = daysOf(t, y, m);
+    if (!ds.length) return;
+    goToDay(ds[ds.length - 1]);
+  }
+
+  /* ---------------- A0. Header (FIX-C / S52-S55) ----------------
+     The header is the ONLY place that shows bank / code / date / model.
+     Every value comes from the published artifact, so a future ICBC / CCB
+     needs no code change (§54), and it follows the selected trading day. */
+  function renderHeader(c) {
+    var h = c.header || {};
+    var bank = c.bank_name || h.bank_name || GLYPH;
+    var code = c.bank_code || h.bank_code || GLYPH;
+    var date = c.score_date || GLYPH;
+    var ver = h.model_version_display ||
+      String(c.model_version || "V1_1").replace(/_/g, ".");
+    var model = c.model_id || h.model_id || GLYPH;
+    setText("hdr-line1", h.line1 || (bank + " · " + code));
+    setText("hdr-line2", h.line2 || (h.board_title || "银行多维量化展示看板") + " · " + date);
+    setText("hdr-line3", h.line3 || (ver + " · " + (h.audience || "个人研究")));
+    setText("hdr-line4", h.line4 || ("评分主体：" + code + " · " + model));
+    // The document title follows the registry identity too (no hard-coded bank).
+    document.title = (h.line1 || (bank + " · " + code)) + " · 银行多维量化展示看板";
+  }
+  function setText(id, v) {
+    var n = el(id);
+    if (n) n.textContent = v;
+  }
+  /* Bank / model identity comes from the bank registry, so a future ICBC / CCB
+     needs no code change (§54).  The fallbacks keep the page sane when the
+     registry has not resolved yet. */
+  function bankIdentity() {
+    var b = state.bank || {};
+    return { name: b.name_cn || "招商银行", code: b.bank_id || "600036.SH" };
+  }
+  function modelIdentity(src) {
+    var b = state.bank || {};
+    return {
+      id: (src && src.model_id) || b.model_id || "CMB_SCORE_MODEL_V1_1",
+      ver: (src && src.model_version) || b.model_version || "V1_1"
+    };
+  }
+  function headerOf(day, src) {
+    var bi = bankIdentity(), mi = modelIdentity(src);
+    var verDisp = String(mi.ver).replace(/_/g, ".");
+    return {
+      bank_name: bi.name, bank_code: bi.code, score_date: day,
+      board_title: "银行多维量化展示看板", audience: "个人研究",
+      model_id: mi.id, model_version: mi.ver, model_version_display: verDisp,
+      line1: bi.name + " · " + bi.code,
+      line2: "银行多维量化展示看板 · " + day,
+      line3: verDisp + " · 个人研究",
+      line4: "评分主体：" + bi.code + " · " + mi.id
+    };
   }
 
   /* ---------------- D. hero (Fix 01 / 03 / 04) ---------------- */
@@ -230,12 +394,20 @@
     var dims = c.dimensions || [];
     el("dim-kpi").innerHTML = dims.map(function (d) {
       var tone = toneOf(d.score, d.max_score, d.status);
+      // FIX-B: the ACTUAL dimension score is the primary visual (26px/700
+      // monospace, V6 .kpi-value).  「/ 26」 is de-emphasised, the score ratio
+      // is secondary (11px) and the progress bar is only an aid (§52).
       return '<div class="kpi-card score-tone-' + tone + '">' +
         '<div class="kpi-label">' + esc(d.name) + "</div>" +
-        '<span class="kpi-value ' + toneTextCls(tone) + '">' +
-          (d.score === null || d.score === undefined ? GLYPH : fmt(d.score, 2)) + "</span>" +
-        '<span class="kpi-max">/ ' + fmt(d.max_score, 0) + " · " + pct(d.score_ratio) +
-          "</span></div>";
+        '<span class="kpi-value ' + toneTextCls(tone) + '" data-role="dimension-score">' +
+          (d.score === null || d.score === undefined ? GLYPH : fmt2(d.score)) + "</span>" +
+        '<span class="kpi-max">/ ' + fmt(d.max_score, 0) + "</span>" +
+        '<div class="kpi-sub">满分 ' + fmt(d.max_score, 0) + " 分</div>" +
+        '<div class="kpi-rate" data-role="dimension-ratio">得分率 ' + pct(d.score_ratio) +
+          "</div>" +
+        '<div class="score-bar-wrap kpi-bar"><i class="score-bar-fill" style="width:' +
+          barWidth(d.score, d.max_score).toFixed(2) + '%"></i></div>' +
+        "</div>";
     }).join("");
 
     el("decomp").innerHTML = dims.map(function (d) {
@@ -301,7 +473,15 @@
          the metric raw value is licensed provider data and is NEVER published
          nor rendered.  The row shows the frozen Fixed band + the position
          inside it instead — both are already public in meta.json. */
-      '<div class="score-row-meta"><span class="raw">' + thresholdChip(m) + "</span>" +
+      '<div class="score-row-meta">' +
+        /* FIX-E: the business value for THIS trading day, already formatted
+           locally by the Display Formatter (NIM 1.95% / NPL 0.95% / CET1
+           14.80% / PB 0.86x ...).  Provider raw / canonical raw / API
+           responses are never published and never rendered (§68).  A missing
+           value is the em dash — never 0 (§69). */
+        '<span class="metric-display" data-role="display-value">实际值 <b>' +
+          esc(m.display || GLYPH) + "</b></span>" +
+        '<span class="raw">' + thresholdChip(m) + "</span>" +
         "<span>得分率 " + pct(m.score_ratio) + "</span>" +
         "<span>数据日 " + esc(m.source_date || GLYPH) + "</span>" +
         "<span>" + statusPill(m.status) + "</span></div></div>";
@@ -856,7 +1036,15 @@
 
   function renderAll(c) {
     state.current = c;
+    if (c.date_tree && Object.keys(c.date_tree).length) {
+      state.dateTree = c.date_tree;
+      state.years = (c.years && c.years.length) ? c.years : Object.keys(c.date_tree).sort();
+    }
+    if (!c.date_tree) c.date_tree = state.dateTree;
+    if (!c.header) c.header = headerOf(c.score_date, c);
     renderTop(c);
+    renderHeader(c);
+    renderDaySelector(c);
     renderHero(c);
     renderDimensions(c);
     renderMetricSections(c);
@@ -941,7 +1129,10 @@
           fixed_full: m.fixed_full_anchor === undefined ? null : m.fixed_full_anchor,
           threshold_origin_type: m.threshold_origin_type || null, unit: m.unit,
           status: sc === null ? "NOT_FULLY_AVAILABLE" : "FULLY_AVAILABLE",
-          source_date: chunk.dates[i], data_asof: chunk.dates[i]
+          source_date: chunk.dates[i], data_asof: chunk.dates[i],
+          /* FIX-E / S68: the day's OWN business value, already formatted
+             locally by the builder.  Missing stays an em dash (S69). */
+          display: ((chunk.metrics_display || {})[mid] || [])[i] || GLYPH
         };
       });
     }
@@ -959,11 +1150,15 @@
   }
 
   function finishDay(day, base, dims, metrics, j, src, meta) {
+    var bi = bankIdentity(), mi = modelIdentity(src);
     return {
       artifact: "CMB_BANK_DAY_VIEW_V2",
       frontend_version: (meta && meta.frontend_version) || "CMB_FRONTEND_V2",
-      bank_code: "600036.SH", bank_name: "招商银行",
-      model_id: src.model_id, model_version: src.model_version,
+      bank_code: bi.code, bank_name: bi.name,
+      model_id: mi.id, model_version: mi.ver,
+      header: headerOf(day, { model_id: mi.id, model_version: mi.ver }),
+      date_tree: state.dateTree,
+      years: (state.years && state.years.length) ? state.years : Object.keys(state.dateTree).sort(),
       model_profile: "CMB_PROFILE",
       score_date: day, data_asof: src.data_asof,
       base_score: base, base_score_max: (meta && meta.total_score) || 100,
@@ -1148,15 +1343,34 @@
       }).catch(function (e) { showError("切换银行失败：" + e.message); });
     });
 
+    el("year-select").addEventListener("change", goToYearMonth);
+    el("month-select").addEventListener("change", goToYearMonth);
     el("day-select").addEventListener("change", function () {
-      var d = el("day-select").value;
-      var c = state.current;
-      if (!c || d === c.score_date) { renderAll(c); return; }
-      loadDay(d).then(function (x) {
-        renderAll(x);
-      }).catch(function () {
-        showError("所选交易日 " + d + " 没有可用快照；页面不使用其他日期代替。", "banner-neutral");
-      });
+      goToDay(el("day-select").value);
+    });
+    el("day-prev").addEventListener("click", function () {
+      var d = siblingDay(-1);
+      if (!d) { showError("已经是第一个可查询交易日。", "banner-neutral"); return; }
+      goToDay(d);
+    });
+    el("day-next").addEventListener("click", function () {
+      var d = siblingDay(1);
+      if (!d) { showError("已经是最后一个可查询交易日（最新）。", "banner-neutral"); return; }
+      goToDay(d);
+    });
+    el("day-latest").addEventListener("click", function () { goToDay(latestDay()); });
+    // Native date input: AUXILIARY only (§61).  A date that was never published
+    // is rejected — the page never falls back to another day.
+    el("native-date").addEventListener("change", function () {
+      var d = el("native-date").value;
+      if (!d) return;
+      if (state.days.indexOf(d) < 0) {
+        showError(d + " 不是已发布的交易日（周末 / 节假日 / 无快照不显示），" +
+          "页面不使用其他日期代替。", "banner-neutral");
+        el("native-date").value = (state.current && state.current.score_date) || "";
+        return;
+      }
+      goToDay(d);
     });
 
     window.addEventListener("resize", function () {
