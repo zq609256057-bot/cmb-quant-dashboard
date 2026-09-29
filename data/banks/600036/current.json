@@ -1694,8 +1694,6 @@
     "board_title": "银行多维量化展示看板",
     "line1": "招商银行 · 600036.SH",
     "line2": "银行多维量化展示看板 · 2026-09-29",
-    "line3": "V1.1 · 个人研究",
-    "line4": "评分主体：600036.SH · CMB_SCORE_MODEL_V1_1",
     "model_id": "CMB_SCORE_MODEL_V1_1",
     "model_version": "V1_1",
     "model_version_display": "V1.1",

@@ -293,24 +293,28 @@
     goToDay(ds[ds.length - 1]);
   }
 
-  /* ---------------- A0. Header (FIX-C / S52-S55) ----------------
-     The header is the ONLY place that shows bank / code / date / model.
-     Every value comes from the published artifact, so a future ICBC / CCB
-     needs no code change (§54), and it follows the selected trading day. */
-  function renderHeader(c) {
+  /* ---------------- Identity Meta Block (§11-§16) ----------------
+     SUPERSEDED_BY_USER_DECISION_20260929: the 2026-09-28 four-line header is
+     replaced by exactly TWO user-visible lines:
+        line 1  <bank name> · <bank code>
+        line 2  银行多维量化展示看板 · <selected score_date>
+     the version+audience line and the score-subject+model-id line are deleted
+     from the public UI (§9).  model_id / bank_code / model_version stay in the
+     machine artifact and in the registry (§10) — they are simply not rendered.
+     Every value comes from the bank registry / published artifact, so a future
+     ICBC / CCB needs no code change (§16), and line 2 follows the selected
+     trading day (§15). */
+  function renderIdentity(c) {
     var h = c.header || {};
     var bank = c.bank_name || h.bank_name || GLYPH;
     var code = c.bank_code || h.bank_code || GLYPH;
     var date = c.score_date || GLYPH;
-    var ver = h.model_version_display ||
-      String(c.model_version || "V1_1").replace(/_/g, ".");
-    var model = c.model_id || h.model_id || GLYPH;
-    setText("hdr-line1", h.line1 || (bank + " · " + code));
-    setText("hdr-line2", h.line2 || (h.board_title || "银行多维量化展示看板") + " · " + date);
-    setText("hdr-line3", h.line3 || (ver + " · " + (h.audience || "个人研究")));
-    setText("hdr-line4", h.line4 || ("评分主体：" + code + " · " + model));
+    var line1 = h.line1 || (bank + " · " + code);
+    var line2 = h.line2 || ((h.board_title || "银行多维量化展示看板") + " · " + date);
+    setText("id-line1", line1);
+    setText("id-line2", line2);
     // The document title follows the registry identity too (no hard-coded bank).
-    document.title = (h.line1 || (bank + " · " + code)) + " · 银行多维量化展示看板";
+    document.title = line1 + " · 银行多维量化展示看板";
   }
   function setText(id, v) {
     var n = el(id);
@@ -321,13 +325,13 @@
      registry has not resolved yet. */
   function bankIdentity() {
     var b = state.bank || {};
-    return { name: b.name_cn || "招商银行", code: b.bank_id || "600036.SH" };
+    return { name: b.name_cn || GLYPH, code: b.bank_id || GLYPH };
   }
   function modelIdentity(src) {
     var b = state.bank || {};
     return {
-      id: (src && src.model_id) || b.model_id || "CMB_SCORE_MODEL_V1_1",
-      ver: (src && src.model_version) || b.model_version || "V1_1"
+      id: (src && src.model_id) || b.model_id || GLYPH,
+      ver: (src && src.model_version) || b.model_version || GLYPH
     };
   }
   function headerOf(day, src) {
@@ -338,9 +342,9 @@
       board_title: "银行多维量化展示看板", audience: "个人研究",
       model_id: mi.id, model_version: mi.ver, model_version_display: verDisp,
       line1: bi.name + " · " + bi.code,
-      line2: "银行多维量化展示看板 · " + day,
-      line3: verDisp + " · 个人研究",
-      line4: "评分主体：" + bi.code + " · " + mi.id
+      line2: "银行多维量化展示看板 · " + day
+      // the version+audience line and the score-subject line are intentionally
+      // absent: deleted from the public UI by user decision 20260929 (§9-§11).
     };
   }
 
@@ -390,25 +394,46 @@
   }
 
   /* ---------------- E + F. dimensions ---------------- */
+  /* §42: a numeric score (INCLUDING 0) is a real value; only null / undefined /
+     non-finite is missing.  Never `score || GLYPH` — in JS 0 is falsy. */
+  function numOrNull(v) {
+    if (v === null || v === undefined || v === "") return null;
+    var n = Number(v);
+    return isFinite(n) ? n : null;
+  }
+  /* §37-§46: the sixth card is the Risk Overlay, a risk DEDUCTION in [0, -20]
+     that is NOT part of the 100-point base score.  It therefore shows no
+     positive-score gradient bar (a "fill" would invert the semantics) and no
+     denominator.  0 -> "0", -3 -> "-3", null -> em dash. */
+  function overlayCard(c) {
+    var n = numOrNull(c.overlay_score);
+    var val = (n === null) ? GLYPH : fmt(n, SCORE_DECIMALS);
+    var sub = (n === null) ? "数据暂不完整" : (n === 0 ? "无风险扣分" : "风险扣分");
+    return '<div class="kpi-card kpi-overlay" data-role="overlay-card">' +
+      '<div class="kpi-label">Risk Overlay</div>' +
+      '<span class="kpi-value" data-role="overlay-score">' + esc(val) + "</span>" +
+      '<div class="kpi-sub">' + esc(sub) + "</div>" +
+      '<div class="kpi-rate">独立风险扣分 · 不属于 100 分基础评分</div>' +
+      "</div>";
+  }
   function renderDimensions(c) {
     var dims = c.dimensions || [];
+    // FIX-04 (§31-§36): the ACTUAL dimension score is the primary visual;
+    // the denominator text and the max-score line are deleted from the user
+    // view.  dimension_max
+    // still exists in the artifact and still drives the progress width (§33).
     el("dim-kpi").innerHTML = dims.map(function (d) {
       var tone = toneOf(d.score, d.max_score, d.status);
-      // FIX-B: the ACTUAL dimension score is the primary visual (26px/700
-      // monospace, V6 .kpi-value).  「/ 26」 is de-emphasised, the score ratio
-      // is secondary (11px) and the progress bar is only an aid (§52).
       return '<div class="kpi-card score-tone-' + tone + '">' +
         '<div class="kpi-label">' + esc(d.name) + "</div>" +
         '<span class="kpi-value ' + toneTextCls(tone) + '" data-role="dimension-score">' +
           (d.score === null || d.score === undefined ? GLYPH : fmt2(d.score)) + "</span>" +
-        '<span class="kpi-max">/ ' + fmt(d.max_score, 0) + "</span>" +
-        '<div class="kpi-sub">满分 ' + fmt(d.max_score, 0) + " 分</div>" +
-        '<div class="kpi-rate" data-role="dimension-ratio">得分率 ' + pct(d.score_ratio) +
+        '<div class="kpi-sub" data-role="dimension-ratio">得分率 ' + pct(d.score_ratio) +
           "</div>" +
         '<div class="score-bar-wrap kpi-bar"><i class="score-bar-fill" style="width:' +
           barWidth(d.score, d.max_score).toFixed(2) + '%"></i></div>' +
         "</div>";
-    }).join("");
+    }).join("") + overlayCard(c);
 
     el("decomp").innerHTML = dims.map(function (d) {
       var tone = toneOf(d.score, d.max_score, d.status);
@@ -605,11 +630,13 @@
           }).join("") + "</div>" +
       "</div>" +
       '<div class="toggle-row"><label><input type="checkbox" id="hist-price"' +
-        (state.showPrice ? " checked" : "") + "> 叠加招商银行股价（右轴对照，仅观察 Score vs Price）</label>" +
+        (state.showPrice ? " checked" : "") + "> 叠加" + esc(bankIdentity().name) +
+        "股价（右轴对照，仅观察 Score vs Price）</label>" +
         '<span id="hist-note" class="hint"></span></div>' +
       '<div class="chart-scroll"><div class="chart-shell" id="hist-shell">' +
         '<canvas id="hist-canvas" class="score-canvas" tabindex="0" role="img" ' +
-          'aria-label="招商银行历史评分曲线" aria-describedby="hist-tip"></canvas>' +
+          'aria-label="' + esc(bankIdentity().name) +
+          '历史评分曲线" aria-describedby="hist-tip"></canvas>' +
         '<canvas id="hist-cross" class="chart-crosshair" aria-hidden="true"></canvas>' +
         '<div id="hist-tip" class="chart-tooltip" hidden></div>' +
       "</div></div>" +
@@ -1043,7 +1070,7 @@
     if (!c.date_tree) c.date_tree = state.dateTree;
     if (!c.header) c.header = headerOf(c.score_date, c);
     renderTop(c);
-    renderHeader(c);
+    renderIdentity(c);
     renderDaySelector(c);
     renderHero(c);
     renderDimensions(c);
@@ -1142,7 +1169,8 @@
     var view = finishDay(chunk.dates[i], base, dims, metrics, j,
                          { data_asof: chunk.dates[i],
                            available_weight: (chunk.available_weight || [])[i],
-                           model_id: "CMB_SCORE_MODEL_V1_1", model_version: "V1_1" },
+                           model_id: (meta && meta.model_id) || GLYPH,
+                           model_version: (meta && meta.model_version) || GLYPH },
                          meta);
     view.historical = true;
     view.no_historical_detail = (detail !== "FULL");

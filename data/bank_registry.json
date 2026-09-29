@@ -56,7 +56,7 @@
   "color_engine": "CMB_SCORE_COLOR_ENGINE_CONTRACT_V1",
   "contract": "CMB_BANK_FRONTEND_REGISTRY_CONTRACT_V1",
   "frontend_version": "CMB_FRONTEND_V2",
-  "generated_at": "2026-09-29T08:29:01.029363+00:00",
+  "generated_at": "2026-09-29T14:07:03.974890+00:00",
   "note": "当前仅招商银行 600036.SH 通过数据可用性 / PIT / 阈值 / 历史 / 校验。其余银行只做架构预留，不显示任何正式评分（§10 禁止伪造）。",
   "total_count": 1
 }

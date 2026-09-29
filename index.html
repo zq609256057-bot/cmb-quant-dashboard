@@ -4,28 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>银行多维量化展示看板</title>
-<meta name="description" content="招商银行（600036.SH）量化评分研究看板 · CMB_SCORE_MODEL_V1_1 · Frontend V2">
+<meta name="description" content="银行多维量化展示看板 · 每日量化评分研究展示 · Frontend V2">
 <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
 <div class="wrap">
 
 <div id="banner" class="banner banner-err" hidden></div>
-
-<!-- A0. Header (FIX-C): identity lives ABOVE the hero, never inside it.
-     Every line is rendered from the published artifact / bank registry, so a
-     future ICBC / CCB needs no code change (§54). -->
-<header class="dashboard-header" id="app-header" data-page-order="header"
-        data-component="Header">
-  <div class="header-content">
-    <h1 id="hdr-line1">—</h1>
-    <div class="header-meta">
-      <div id="hdr-line2">—</div>
-      <span class="header-badge" id="hdr-line3">—</span>
-    </div>
-    <p class="underlying" id="hdr-line4">—</p>
-  </div>
-</header>
 
 <!-- A. 顶部状态 / 更新时间 -->
 <div class="topbar" data-section="A_STATUS">
@@ -89,6 +74,17 @@
   </div>
 </section>
 
+<!-- C+/D-. Identity Meta Block (§12-§16): the ONLY user-visible identity
+     text, exactly two lines.  Deliberately NOT a card: no background, no
+     border, no shadow, no watermark (§14).  It sits strictly between the C
+     date-entry card and the D hero; their existing relative order is kept
+     untouched (§13).  Both lines are rendered from the bank registry /
+     published artifact, so a future ICBC / CCB needs no code change (§16). -->
+<div class="identity-meta" id="identity-meta" data-component="IdentityMeta">
+  <div class="identity-line1" id="id-line1">—</div>
+  <div class="identity-line2" id="id-line2">—</div>
+</div>
+
 <!-- D. Hero：综合值博率基础评分 -->
 <section class="score-hero" id="hero" data-section="D_HERO" data-component="HeroScore">
   <!-- FIX-C: the hero is the SCORE ONLY.  Bank / code / date now live in the
@@ -113,7 +109,7 @@
 <!-- E. 5 大维度 KPI -->
 <section class="card" data-section="E_DIMENSION_KPI">
   <div class="card-title"><span class="ord">E</span>五大维度 KPI</div>
-  <div class="card-subtitle">每个维度按自身满分归一化；颜色随得分水平变化。</div>
+  <div class="card-subtitle">前 5 张为基础评分维度（合计 100 分，按自身满分归一化，颜色随得分水平变化）；第 6 张 Risk Overlay 为独立风险扣分，不属于 100 分基础评分。</div>
   <div id="dim-kpi" class="kpi-grid"></div>
 </section>
 
