@@ -2206,7 +2206,7 @@
   "frontend_version": "CMB_FRONTEND_V2",
   "metric_display_resolution": "RESOLVED",
   "metric_display_resolution_reason": "",
-  "metric_display_resolved_days": 1341,
+  "metric_display_resolved_days": 1342,
   "metrics": {
     "A01": [
       6.766667,
