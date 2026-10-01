@@ -269,6 +269,10 @@ table.m td.id{font-weight:700;white-space:nowrap}
   var CF = {"HIGH":"高","MEDIUM":"中","LOW":"低"};
   var STT = {"READY":"就绪","MISSING":"缺失","INVALID":"无效","FULLY_AVAILABLE":"完整可用",
              "NOT_FULLY_AVAILABLE":"非完整可用","NOT_AVAILABLE":"不可用","NO_SNAPSHOT":"无快照"};
+  // V2F-FE-01：el() 只对「HTML 中确实存在」的节点使用。
+  // 任何 el('X') 的 X 必须能在 HTML 模板里找到 id="X"；
+  // 缺失即由 CMB_V2_FRONTEND_DOM_REFERENCE_INTEGRITY_AUDIT_V1 在构建期拦下，
+  // 不允许出现「模板里没有、JS 里却强写」的死引用（curDate 事故的成因）。
   var el = function(id){return document.getElementById(id)};
   var esc = function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
@@ -323,7 +327,10 @@ table.m td.id{font-weight:700;white-space:nowrap}
         i = (day&&day.investment)||{}, ro = (day&&day.risk_overlay)||{};
     var serStatus = (SER.status||[])[idx];
     var serSource = (SER.source||[])[idx] || 'PHASE_C_FROZEN_RESEARCH_TRAJECTORY';
-    el('curDate').textContent = d;
+    // V2F-FE-01 —— 本次修复删掉了原先位于 render() 首行、指向 curDate 节点的
+    // 赋值语句。HTML 模板自始至终没有定义该节点，它是模板残留的死引用；
+    // 交易日已由 <select id="dateSel"> 的选中项真实展示，没有独立 UI 用途。
+    // 它作为 render() 的第一句抛 TypeError，导致其后全部渲染逻辑中断。
     el('srcNote').textContent = serSource==='V2_PRODUCTION_SNAPSHOT' ? '数据来源：V2 Production Snapshot（正式生产运行，唯一 Production Authority）' : '数据来源：Phase C 冻结研究轨迹（1340 日 exact parity，浏览器不重算模型）' + (day?'':'；该日不在逐项明细窗口内');
 
     // 无逐项明细时，用冻结序列补齐分数与模块/子模块
@@ -431,6 +438,9 @@ table.m td.id{font-weight:700;white-space:nowrap}
     if(!shell) return null;
     var cv = shell.querySelector('canvas'), cross = shell.querySelector('.chart-crosshair'),
         tip = shell.querySelector('.chart-tip');
+    // V2F-FE-01 DOM 完整性：图表壳缺件时降级为「该图不绘制」，
+    // 绝不因为单个图表缺 canvas / crosshair / tip 而中断整页脚本。
+    if(!cv || !cv.getContext || !cross || !tip) return null;
     var ctx = cv.getContext('2d');
     var series = cfg.series||[], labels = cfg.labels||[], marker = cfg.marker;
     function size(){
@@ -544,7 +554,9 @@ table.m td.id{font-weight:700;white-space:nowrap}
         {name:'投资吸引力评分',color:'#2563eb',data:invB,width:1.2}]});
       var ft = DATA.forward_timeline||{status:'NO_HISTORICAL_FORWARD_EVIDENCE',points:[]};
       if(ft.status!=='OK'||!ft.points.length){
-        document.getElementById('chartC').innerHTML =
+        var cC = document.getElementById('chartC');
+        if(!cC) return;
+        cC.innerHTML =
           '<div class="warnbox" style="margin:0">NO_HISTORICAL_FORWARD_EVIDENCE：目前没有任何真实 Forward Evidence，'+
           '因此不存在 Forward 历史线；禁止把今天的规则倒填到 2021 年。</div>';
       }else{
