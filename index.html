@@ -2,115 +2,246 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>招商银行 · 量化评分研究看板</title>
-<meta name="description" content="招商银行量化评分 · 多银行多模型研究看板">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>招商银行量化评分 · MODEL_V2_FRONTEND_V6（600036.SH）</title>
+<!-- PHASE H.2 §1 / §8 / §9 —— 视觉外壳 = MODEL_V2_FRONTEND_V6（视觉黄金母版
+     Public Commit 47ad8f199628ac2dc2de5b5919e2c674d8637935）。
+     单页 shell + 数据驱动换模型：不存在 index_v2.html / index_v3.html 分叉。
+     浏览器只做 fetch / select / format / render / chart，绝不重算任何评分。 -->
 <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <h1>量化评分研究看板</h1>
-    <p class="sub">Multi-Bank · Multi-Model · 仅个人研究记录，不构成任何投资建议</p>
-  </div>
-</header>
+<!-- §23 —— 视觉外壳直接挂在 <body> 下，与黄金页的 body 子节点结构完全一致
+     （黄金页 body 的第一个可见子节点就是 .wrap）。不额外包一层 #app 容器，
+     否则 DOM 会多出一个节点、几何清单的 key 序列与黄金页对不上。
+     换银行 / 换模型时重新克隆下面这个模板，因此不会有任何跨模型残留状态。 -->
+<template id="shell-tpl">
 
-<section class="selectors" aria-label="银行与模型选择">
-  <div class="sel">
-    <label for="bank-select" id="bank-label">银行</label>
-    <select id="bank-select" aria-labelledby="bank-label"></select>
-  </div>
-  <div class="sel">
-    <label for="model-select" id="model-label">模型</label>
-    <select id="model-select" aria-labelledby="model-label"></select>
-  </div>
-  <div class="sel">
-    <label for="date-select" id="date-label">评分日期</label>
-    <select id="date-select" aria-labelledby="date-label"></select>
-  </div>
-  <div class="badges">
-    <span class="badge" id="badge-status" data-role="OPERATIONAL_STATUS"></span>
-    <span class="badge ghost" id="badge-role" data-role="SELECTION_ROLE"></span>
-  </div>
-</section>
+<div class="wrap">
 
-<main id="main">
-  <p class="no-overall" data-semantic="NO_OVERALL_SCORE">
-    Core 100 与 Investment 100 分别独立展示，不存在综合总分。
-  </p>
-
-  <section class="hero">
-    <div class="card" id="hero-core">
-      <h2>核心基本面 Core</h2>
-      <div class="big" id="core-score">—</div>
-      <div class="meta" id="core-meta"></div>
+  <div class="topbar" data-section="A_STATUS">
+    <div class="left">
+      <!-- H.2 §15 / §16 / §17 —— 银行选择器与模型选择器直接嵌进原来的
+           .topbar .left 徽标行，沿用 .badge 药丸的同一套视觉语言与尺寸：
+           不新增顶部导航条、不新增工具栏、不引入新的设计系统。 -->
+      <select class="badge badge-select" id="bank-select" aria-label="银行选择器"></select>
+      <select class="badge badge-select mono" id="model-select" aria-label="模型选择器"></select>
+      <span class="badge" id="top-scope">—</span>
+      <span class="badge" id="top-role">—</span>
     </div>
-    <div class="card" id="hero-investment">
-      <h2>投资吸引力 Investment</h2>
-      <div class="big" id="inv-score">—</div>
-      <div class="meta" id="inv-meta"></div>
+    <div class="right"><span class="hint" id="top-updated">最新交易日 —</span></div>
+  </div>
+
+  <section class="card" data-section="C_ENTRY">
+    <div class="card-title">模型与交易日入口</div>
+    <div class="card-subtitle">切换交易日即可查看该日评分明细；缺失的交易日不使用其他日期代替。</div>
+    <div class="date-selector">
+      <div class="date-field"><label for="year-select">年</label>
+        <select id="year-select" aria-label="年份选择器"></select></div>
+      <div class="date-field"><label for="month-select">月</label>
+        <select id="month-select" aria-label="月份选择器"></select></div>
+      <div class="date-field"><label for="day-select">交易日</label>
+        <select id="day-select" aria-label="交易日选择器"></select></div>
+      <div class="date-nav">
+        <button type="button" id="day-prev" class="btn-mini" title="前一交易日">← 前一交易日</button>
+        <button type="button" id="day-next" class="btn-mini" title="后一交易日">后一交易日 →</button>
+        <button type="button" id="day-latest" class="btn-mini" title="回到最新">最近交易日</button>
+      </div>
+    </div>
+    <div class="date-native">
+      <label for="native-date">日期直达（可直接输入 / 选择年月日）</label>
+      <input type="date" id="native-date" aria-label="日期直达">
+    </div>
+    <div class="date-picker">
+      <button type="button" id="cal-toggle" class="btn-mini"
+              title="打开日历直接点选日期" aria-expanded="false">日历选择</button>
+      <div class="cal-panel" id="cal-panel" hidden></div>
+      <div class="cal-foot">灰显日期为非交易日 / 无评分日；点选后将回退到不晚于该日的最近可用交易日并显式提示。</div>
+    </div>
+    <div>
+      <div class="selector-status" id="day-status">—</div>
+      <div class="selector-current" id="day-current">—</div>
+    </div>
+    <div class="status-note" id="date-notice" hidden></div>
+  </section>
+
+  <!-- §6 ~ §12 / §15 —— 顶部身份行（NO_SECTION_NUMBER）。
+       左 = 证券（黑字靠左）；右 = 最新交易日（黑字靠右，字号更小）。
+       日期永远来自 LATEST_DATE（最新 Production 可用交易日），
+       不随用户 SELECTED_SCORE_DATE 变化；容器无背景 / 无边框 / 无阴影。 -->
+  <div class="top-identity" id="top-identity" data-section="B_TOP_IDENTITY">
+    <div class="ti-left" id="ti-left">—</div>
+    <div class="ti-right" id="ti-right">—</div>
+  </div>
+
+  <!-- §13 / §14 / §15 —— Hero：展示标题改为「值博率」，且不参与一级编号。
+       底层仍分别绑定 CORE_FUNDAMENTAL_SCORE / INVESTMENT_ATTRACTION_SCORE。 -->
+  <section class="score-hero" id="hero-core" data-section="D_HERO_CORE">
+    <h2 id="core-title">基本面综合值博率</h2>
+    <div class="hero-value">
+      <span id="core-score" class="score-big score-tone-text-unavailable">—</span>
+      <span class="hero-unit">/ 100</span>
+      <span id="core-flag"></span>
+    </div>
+    <div class="verdict-pill"><span class="verdict-dot"></span><b id="core-verdict">—</b></div>
+    <div class="scale-track"><div class="scale-fill" id="core-fill" style="width:0%"></div></div>
+    <div class="scale-labels"><span>0</span><span>30</span><span>45</span><span>60</span>
+      <span>70</span><span>85</span><span>100</span></div>
+    <div class="hero-meta hero-stats" id="core-stats"></div>
+  </section>
+
+  <section class="card" data-section="F_CORE">
+    <div class="card-title"><span class="ord">①</span>核心基本面 · 四个内部模块 17 项</div>
+    <div class="card-subtitle">模块小计由 Python ViewModel 从正式 Contract 计算输出（精确未舍入）；
+      D02 分红政策质量只属于「股东回报质量」，不出现在投资吸引力。</div>
+    <div id="core-modules"></div>
+  </section>
+
+  <section class="card" data-section="E_FORWARD_OVERLAY">
+    <div class="card-title"><span class="ord">②</span>核心基本面前瞻状态 · Risk Overlay（独立）</div>
+    <div class="card-subtitle">前瞻状态永不打分；Risk Overlay 独立展示，不并入任何分数。</div>
+    <div class="kpi-grid kpi-grid-2">
+      <div class="kpi-card" id="fwd-card">
+        <div class="kpi-label">核心基本面前瞻状态</div>
+        <div id="fwd-state" style="margin-top:4px"></div>
+        <div id="fwd-meta"></div>
+      </div>
+      <div class="kpi-card kpi-overlay" id="ro-card">
+        <div class="kpi-label">Risk Overlay（独立）</div>
+        <span class="kpi-value" id="ro-score">—</span>
+        <div id="ro-meta"></div>
+      </div>
+    </div>
+    <div class="section-label">前瞻四模块状态</div>
+    <div id="fwd-mods"></div>
+    <div id="ev-wrap"></div>
+  </section>
+
+  <section class="score-hero" id="hero-inv" data-section="D_HERO_INVESTMENT">
+    <h2 id="inv-title">吸引力综合值博率</h2>
+    <div class="hero-value">
+      <span id="inv-score" class="score-big score-tone-text-unavailable">—</span>
+      <span class="hero-unit">/ 100</span>
+      <span id="inv-flag"></span>
+    </div>
+    <div class="verdict-pill"><span class="verdict-dot"></span><b id="inv-verdict">—</b></div>
+    <div class="scale-track"><div class="scale-fill" id="inv-fill" style="width:0%"></div></div>
+    <div class="scale-labels"><span>0</span><span>30</span><span>45</span><span>60</span>
+      <span>70</span><span>85</span><span>100</span></div>
+    <div class="hero-meta hero-stats" id="inv-stats"></div>
+  </section>
+
+  <section class="card" data-section="G_INVESTMENT">
+    <div class="card-title"><span class="ord">③</span>投资吸引力 · 两个子模块 7 项</div>
+    <div id="inv-modules"></div>
+  </section>
+
+  <!-- §20 ~ §26 —— 综合研判（Local Python 确定性生成，0 LLM，不含未来收益） -->
+  <section class="card" data-section="J_COMPREHENSIVE">
+    <div class="card-title"><span class="ord">④</span>综合研判</div>
+    <div class="assess-grid">
+      <div class="assess-card pos" id="assess-positive">
+        <h4>Positive · 利多因素</h4><ul id="assess-pos-list"></ul>
+      </div>
+      <div class="assess-card neg" id="assess-negative">
+        <h4>Negative · 利空因素</h4><ul id="assess-neg-list"></ul>
+      </div>
+      <div class="assess-card concl" id="assess-conclusion">
+        <h4>Conclusion · 综合研判</h4><p id="assess-concl-text">—</p>
+      </div>
     </div>
   </section>
 
-  <section class="panel" id="sec-core">
-    <h3>核心基本面明细（17 项）</h3>
-    <div id="core-modules" class="modules"></div>
-    <table class="tbl" id="core-table"><thead><tr>
-      <th>指标</th><th>名称</th><th>原始值</th><th>得分</th><th>满分</th><th>数据日期</th>
-    </tr></thead><tbody></tbody></table>
+  <!-- §27 / §38 / §39 —— 评分信号共振（PRESENTATION_ONLY） -->
+  <section class="card" data-section="K_RESONANCE">
+    <div class="card-title"><span class="ord">⑤</span>评分信号共振</div>
+    <div class="card-subtitle">评分区间来自全历史分布研究（只看历史分位，不看未来收益）；
+      当前所在行高亮。此处不产生第三个综合分。</div>
+    <div id="resonance-core-wrap"></div>
+    <div id="resonance-inv-wrap"></div>
+    <div class="resonance-joint" id="resonance-joint">—</div>
   </section>
 
-  <section class="panel" id="sec-investment">
-    <h3>投资吸引力明细（7 项）</h3>
-    <div id="inv-modules" class="modules"></div>
-    <table class="tbl" id="inv-table"><thead><tr>
-      <th>指标</th><th>名称</th><th>原始值</th><th>得分</th><th>满分</th><th>数据日期</th>
-    </tr></thead><tbody></tbody></table>
+  <section class="card" data-section="H_HISTORY">
+    <div class="card-title"><span class="ord">⑥</span>历史评分</div>
+    <div class="card-subtitle">正式实线 = LEVEL-A 完整可比历史；虚线 = 扩展研究历史（RESEARCH_ONLY，默认关闭）。</div>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="chk-partial"> 显示扩展历史（研究 · 覆盖率归一化）</label>
+      <span id="hist-legend-note"></span>
+    </div>
+    <!-- §41 ~ §43 —— 任意日期区间选择器（只控制历史图 X 轴与区间统计） -->
+    <div class="range-toolbar">
+      <div class="range-field"><label for="hist-start">开始日期</label>
+        <input type="date" id="hist-start" aria-label="历史区间开始日期"></div>
+      <div class="range-field"><label for="hist-end">结束日期</label>
+        <input type="date" id="hist-end" aria-label="历史区间结束日期"></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-apply">应用</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-reset">重置 / 全部</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-1y">1Y</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-3y">3Y</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-5y">5Y</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="hist-all">ALL</button></div>
+    </div>
+    <div class="status-note" id="hist-range-note" hidden></div>
+    <div class="selector-status" id="hist-range-status">—</div>
+    <div style="margin-top:10px">
+      <div class="chart-legend">
+        <span><i style="background:#7c3aed"></i>CHART-A 核心基本面历史（正式 Fixed）</span>
+        <span><i class="legend-dash"></i>动态阈值研究 Shadow（RESEARCH_ONLY）</span>
+      </div>
+      <div class="chart-scroll"><div class="chart-shell" id="chartA">
+        <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
+        <div class="chart-tooltip"></div>
+      </div></div>
+      <div class="extrema-grid" id="extrema-a"></div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="chart-legend">
+        <span><i style="background:#2563eb"></i>CHART-B 投资吸引力历史</span>
+        <span><i class="legend-dash"></i>扩展研究历史</span>
+      </div>
+      <div class="chart-scroll"><div class="chart-shell" id="chartB">
+        <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
+        <div class="chart-tooltip"></div>
+      </div></div>
+      <div class="extrema-grid" id="extrema-b"></div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="chart-legend"><span><i style="background:#059669"></i>CHART-C Forward Timeline</span></div>
+      <div class="chart-scroll"><div class="chart-shell" id="chartC">
+        <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
+        <div class="chart-tooltip"></div>
+      </div></div>
+    </div>
+    <div class="selector-status" id="src-note" style="margin-top:8px">—</div>
   </section>
 
-  <section class="panel" id="sec-forward">
-    <h3>前瞻基本面 Forward</h3>
-    <div id="forward-body" class="kv"></div>
+  <section class="card" data-section="I_DYNAMIC">
+    <div class="card-title"><span class="ord">⑦</span>动态阈值研究 · Research Only</div>
+    <div class="card-subtitle">以下动态阈值仅用于研究比较，
+      当前 CMB_SCORE_MODEL_V2 Production 仍使用固定阈值。</div>
+    <div id="dyn-cards"></div>
   </section>
 
-  <section class="panel" id="sec-overlay">
-    <h3>Risk Overlay（独立，不并入 100 分）</h3>
-    <div id="overlay-body" class="kv"></div>
+  <!-- §61 ~ §81 —— 评分阈值收益验证（信号源唯一 = 投资吸引力评分） -->
+  <section class="card" data-section="L_THRESHOLD_RETURN">
+    <div class="card-title"><span class="ord">⑧</span>评分阈值收益验证</div>
+    <div class="card-subtitle">持有 252 交易日 · 已完成样本只读展示</div>
+    <div class="research-note" id="thr-source">信号来源：投资吸引力评分</div>
+    <div class="table-scroll"><div id="thr-table-wrap"></div></div>
+    <div class="hr-note">历史结果不代表未来表现。</div>
   </section>
 
-  <section class="panel" id="sec-v04" hidden>
-    <h3>V04 · 分红支付率校准 PB 估值偏离</h3>
-    <div id="v04-body" class="kv"></div>
-  </section>
+  <!-- §31 / §32 —— 运行态元信息区块：V6 起整段从公开 UI 移除。
+       后台运行态数据 / 生成与发布 metadata / Audit 字段全部保留，
+       仅 USER_VISIBLE = FALSE。 -->
 
-  <section class="panel" id="sec-rs60" hidden>
-    <h3>RS60 · 相对强度</h3>
-    <div id="rs60-body" class="kv"></div>
-  </section>
+  <footer></footer>
 
-  <section class="panel" id="sec-history">
-    <h3>历史评分</h3>
-    <div class="chart-wrap"><svg id="hist-chart" viewBox="0 0 960 260" preserveAspectRatio="none" role="img" aria-label="历史评分走势"></svg></div>
-    <table class="tbl" id="hist-table"><thead><tr>
-      <th>日期</th><th>Core</th><th>Investment</th>
-    </tr></thead><tbody></tbody></table>
-  </section>
+</div>
+</template>
 
-  <section class="panel" id="sec-runtime">
-    <h3>运行信息</h3>
-    <div id="runtime-body" class="kv"></div>
-  </section>
-
-  <section class="panel" id="sec-limits">
-    <h3>已知限制</h3>
-    <ul id="limits-body"></ul>
-  </section>
-</main>
-
-<footer class="foot">
-  <p>数值展示遵循 GLOBAL_FRONTEND_NUMERIC_DISPLAY_CONTRACT_V1：原始小数位 ≤ 2 保持原精度，> 2 按 ROUND_HALF_UP 保留 2 位；仅改变 Display，不改变 Raw Data / Runtime / Golden / Scoring / PIT。</p>
-  <p id="foot-meta"></p>
-</footer>
-<script src="assets/app.js"></script>
+<script src="assets/shell.js" defer></script>
+<script src="assets/app.js" defer></script>
 </body>
 </html>

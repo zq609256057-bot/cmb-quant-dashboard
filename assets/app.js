@@ -1,449 +1,218 @@
-/* CMB_MULTI_BANK_MULTI_MODEL_FRONTEND_CONTRACT_V1 — presentation only.
+/* =========================================================================
+ * PHASE H.2 §9 / §10 / §11 / §39 / §40 / §41 —— NEUTRAL LOADER
  *
- * The browser NEVER scores, thresholds, computes V04 / RS60 / PIT / forward
- * aggregation or risk overlay (§29).  Every business number is read as the
- * pre-formatted `d` field produced by
- * CMB_FRONTEND_GLOBAL_NUMERIC_DISPLAY_CONTRACT_V1 in Python Decimal
- * ROUND_HALF_UP.  `r` (raw text) is carried for parity/plotting only and is
- * never re-rounded with Math.round (§19).
- */
+ * The single public index.html is model-agnostic.  This loader owns exactly
+ * three things and nothing else:
+ *
+ *   1. the BANK registry select            (VISIBLE_ALWAYS, registry-driven)
+ *   2. the MODEL registry select           (V3 = DEFAULT, V2 = ALTERNATE)
+ *   3. fetching the chosen model payload + its per-year detail chunks
+ *
+ * Rendering stays 100% inside the restored MODEL_V2_FRONTEND_V6 shell
+ * (assets/shell.js).  Switching a bank or a model re-clones the shell markup
+ * and re-boots it, so there is never cross-model DOM / chart / tooltip /
+ * date / metric residue (§41).
+ *
+ * The browser still only fetches, selects, formats (by table lookup), renders
+ * and charts.  It never scores, thresholds, prices, or recomputes anything.
+ * ========================================================================= */
 (function () {
   "use strict";
 
-  var DATA_ROOT = "assets/data";
-  var DEFAULT_BANK = "CMB";
-  var DEFAULT_MODEL = "CMB_SCORE_MODEL_V3";
-  var FRESH_ROOT_DEFAULTS = { bank: DEFAULT_BANK, model: DEFAULT_MODEL };
+  var REGISTRY = "assets/data/banks.json";
+  var LOADING = {};                       /* `${bank}/${model}/${year}` in flight */
+  var LOADED = {};                        /* same key, already merged          */
+  var STATE = {banks: null, bank: null, model: null, payload: null};
 
-  var STATE = {
-    bank: DEFAULT_BANK,
-    model: DEFAULT_MODEL,
-    date: null,
-    banks: null,
-    models: null,
-    index: null,
-    day: null,
-    history: null,
-    yearCache: {},
-    chartState: null,
-    tooltipState: null
-  };
-
-  var $ = function (id) { return document.getElementById(id); };
-
-  function disp(cell) {
-    if (cell === null || cell === undefined) return "—";
-    if (typeof cell === "object") return cell.d === undefined ? "—" : cell.d;
-    return String(cell);
-  }
-  function rawNum(cell) {
-    if (!cell || cell.r === null || cell.r === undefined) return null;
-    var v = parseFloat(cell.r);
-    return isFinite(v) ? v : null;
-  }
-  function txt(v) { return (v === null || v === undefined || v === "") ? "—" : String(v); }
-
-  function urlParams() {
-    var q = new URLSearchParams(window.location.search);
-    return { bank: q.get("bank"), model: q.get("model"), date: q.get("date") };
-  }
-  function pushUrl(replace) {
-    var q = new URLSearchParams();
-    q.set("bank", STATE.bank);
-    q.set("model", STATE.model);
-    if (STATE.date) q.set("date", STATE.date);
-    var u = window.location.pathname + "?" + q.toString();
-    if (replace) window.history.replaceState({ bank: STATE.bank, model: STATE.model, date: STATE.date }, "", u);
-    else window.history.pushState({ bank: STATE.bank, model: STATE.model, date: STATE.date }, "", u);
+  function qs(name) {
+    var m = new RegExp("[?&]" + name + "=([^&]*)").exec(location.search || "");
+    return m ? decodeURIComponent(m[1]) : null;
   }
 
-  function fetchJson(path) {
-    return fetch(path, { cache: "no-store" }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status + " " + path);
+  function getJSON(url) {
+    return fetch(url, {cache: "no-cache"}).then(function (r) {
+      if (!r.ok) throw new Error(url + " -> HTTP " + r.status);
       return r.json();
     });
   }
 
-  /* ---------------------------------------------------------- selectors */
-  function renderBankSelector() {
-    var sel = $("bank-select");
-    sel.innerHTML = "";
-    STATE.banks.banks.forEach(function (b) {
-      var o = document.createElement("option");
-      o.value = b.institution_id;
-      o.textContent = b.institution_name_zh + " " + b.instrument_id;
-      if (b.institution_id === STATE.bank) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.setAttribute("aria-label", "银行选择");
-    // §4 — always visible, even with a single option (never hidden).
-    sel.disabled = false;
+  function fill(sel, entries, current) {
+    sel.innerHTML = entries.map(function (e) {
+      return '<option value="' + e.value + '">' + e.label + "</option>";
+    }).join("");
+    sel.value = current;
   }
 
-  function renderModelSelector() {
-    var bank = null;
-    STATE.banks.banks.forEach(function (b) { if (b.institution_id === STATE.bank) bank = b; });
-    STATE.models = bank ? bank.models : [];
-    var sel = $("model-select");
-    sel.innerHTML = "";
-    STATE.models.forEach(function (m) {
-      var o = document.createElement("option");
-      o.value = m.model_id;
-      /* §9 — selection role and operational status are separate things. */
-      o.textContent = m.model_id + " · " + (m.selection_label_zh || "");
-      if (m.model_id === STATE.model) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.setAttribute("aria-label", "模型选择");
-    sel.disabled = false;
-  }
-
-  function renderBadges() {
-    var m = currentModel();
-    $("badge-status").textContent = m ? ("运行状态：" + (m.status_badge_zh || m.operational_status)) : "";
-    $("badge-role").textContent = m ? ("选择角色：" + (m.selection_label_zh || m.selection_role)) : "";
-    $("badge-status").setAttribute("data-operational-status", m ? m.operational_status : "");
-    $("badge-role").setAttribute("data-selection-role", m ? m.selection_role : "");
-  }
-
-  function currentModel() {
-    var out = null;
-    (STATE.models || []).forEach(function (m) { if (m.model_id === STATE.model) out = m; });
-    return out;
-  }
-
-  function renderDateSelector() {
-    var sel = $("date-select");
-    sel.innerHTML = "";
-    var dates = (STATE.index && STATE.index.dates) || [];
-    dates.forEach(function (d) {
-      var o = document.createElement("option");
-      o.value = d;
-      o.textContent = d;
-      if (d === STATE.date) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.setAttribute("aria-label", "评分日期选择");
-    sel.disabled = dates.length === 0;
-  }
-
-  /* -------------------------------------------------------------- render */
-  function clearAll() {
-    /* §33 — a model switch must not leave any previous view state behind. */
-    STATE.day = null; STATE.history = null;
-    STATE.chartState = null; STATE.tooltipState = null;
-    $("core-score").textContent = "—";
-    $("inv-score").textContent = "—";
-    $("core-meta").textContent = "";
-    $("inv-meta").textContent = "";
-    ["core-modules", "inv-modules"].forEach(function (id) { $(id).innerHTML = ""; });
-    ["core-table", "inv-table", "hist-table"].forEach(function (id) {
-      $(id).querySelector("tbody").innerHTML = "";
-    });
-    ["forward-body", "overlay-body", "v04-body", "rs60-body", "runtime-body"].forEach(function (id) {
-      $(id).innerHTML = "";
-    });
-    $("limits-body").innerHTML = "";
-    var svg = $("hist-chart");
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-  }
-
-  function kv(el, k, v) {
-    var a = document.createElement("div"); a.className = "k"; a.textContent = k;
-    var b = document.createElement("div"); b.className = "v"; b.textContent = v;
-    el.appendChild(a); el.appendChild(b);
-  }
-
-  function rowsFor(tbody, list) {
-    list.forEach(function (m) {
-      var tr = document.createElement("tr");
-      [txt(m.id), txt(m.name), disp(m.raw), disp(m.score), disp(m.max_score), txt(m.source_date || m.source_period)]
-        .forEach(function (v) {
-          var td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
-        });
-      tbody.appendChild(tr);
+  function bankEntries(reg) {
+    return (reg.banks || []).map(function (b) {
+      return {value: b.institution_id,
+              label: (b.institution_name_zh || b.display_name_zh ||
+                      b.institution_id) +
+                     (b.instrument_id ? " " + b.instrument_id : "")};
     });
   }
 
-  function renderModules(el, mods) {
-    (mods || []).forEach(function (mo) {
-      var d = document.createElement("div");
-      d.className = "mod";
-      var b = document.createElement("b"); b.textContent = disp(mo.score);
-      d.appendChild(b);
-      var s = document.createElement("span");
-      s.textContent = " / " + disp(mo.max_score) + " · " + txt(mo.name);
-      d.appendChild(s);
-      el.appendChild(d);
+  function modelEntries(bank) {
+    return (bank.models || []).map(function (m) {
+      return {value: m.model_id, label: m.model_id};
     });
   }
 
-  function renderLimits(ix) {
-    var ul = $("limits-body");
-    ul.innerHTML = "";
-    ((ix && ix.known_limitations) || []).forEach(function (t) {
-      var li = document.createElement("li");
-      li.textContent = t;
-      ul.appendChild(li);
-    });
+  function findBank(reg, id) {
+    var list = reg.banks || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].institution_id === id) return list[i]; }
+    return list[0];
   }
 
-  function renderDay() {
-    var d = STATE.day;
-    if (!d) return;
-    $("core-score").textContent = disp(d.core && d.core.score);
-    $("inv-score").textContent = disp(d.investment && d.investment.score);
-    $("core-meta").textContent = "状态 " + txt(d.core && d.core.status) +
-      " · 满分 " + disp(d.core && d.core.target_score);
-    $("inv-meta").textContent = "状态 " + txt(d.investment && d.investment.status) +
-      " · 满分 " + disp(d.investment && d.investment.target_score);
-
-    renderModules($("core-modules"), d.core && d.core.modules);
-    renderModules($("inv-modules"), d.investment && d.investment.submodules);
-    rowsFor($("core-table").querySelector("tbody"), (d.core && d.core.members) || []);
-    rowsFor($("inv-table").querySelector("tbody"), (d.investment && d.investment.members) || []);
-
-    var f = $("forward-body");
-    kv(f, "Policy", txt(d.forward && d.forward.policy));
-    kv(f, "Status", txt(d.forward && d.forward.status));
-    kv(f, "计入 100 分", String(!!(d.forward && d.forward.in_100_point_score)));
-    if (d.forward && d.forward.note) kv(f, "说明", d.forward.note);
-
-    var o = $("overlay-body");
-    var ov = d.risk_overlay || {};
-    kv(o, "Overlay ID", txt(ov.overlay_id));
-    kv(o, "Status", txt(ov.status));
-    kv(o, "区间", disp(ov.range_min) + " ~ " + disp(ov.range_max));
-    kv(o, "并入总分", String(!!ov.netted_into_score));
-    kv(o, "独立于 Core/Investment", String(!!ov.independent_of_core_and_investment));
-
-    var v4 = $("sec-v04"), vb = $("v04-body");
-    if (d.v04) {
-      v4.hidden = false;
-      kv(vb, "指标", txt(d.v04.chinese_name));
-      kv(vb, "Theoretical identity", txt(d.v04.theoretical_identity));
-      kv(vb, "Disclosure", txt(d.v04.disclosure));
-      kv(vb, "Formula version", txt(d.v04.formula_version));
-      Object.keys(d.v04.inputs || {}).forEach(function (k) {
-        kv(vb, k, disp(d.v04.inputs[k]));
-      });
-      if (d.v04.disclosure_note) kv(vb, "披露", d.v04.disclosure_note);
-    } else { v4.hidden = true; }
-
-    var r6 = $("sec-rs60"), rb = $("rs60-body");
-    if (d.rs60) {
-      r6.hidden = false;
-      kv(rb, "标的", txt(d.rs60.subject));
-      kv(rb, "基准", txt(d.rs60.benchmark));
-      kv(rb, "区间数 / 观察点", txt(d.rs60.intervals) + " / " + txt(d.rs60.observation_points));
-      kv(rb, "Method", txt(d.rs60.method));
-      kv(rb, "Mapping", txt(d.rs60.mapping));
-      Object.keys(d.rs60.inputs || {}).forEach(function (k) {
-        kv(rb, k, disp(d.rs60.inputs[k]));
-      });
-      if (d.rs60.note) kv(rb, "说明", d.rs60.note);
-    } else { r6.hidden = true; }
-
-    var rt = $("runtime-body");
-    var m = currentModel() || {};
-    kv(rt, "Model", txt(m.model_id));
-    kv(rt, "Contract", txt(m.contract_version));
-    kv(rt, "Runtime", txt(m.runtime_version));
-    kv(rt, "Selection role", txt(m.selection_role));
-    kv(rt, "Operational status", txt(m.operational_status));
-    kv(rt, "Production authority", String(!!m.production_authority));
-    kv(rt, "Score date", txt(d.score_date));
-    kv(rt, "Fingerprint", txt(m.model_fingerprint));
-  }
-
-  function renderHistory() {
-    var h = STATE.history;
-    if (!h) return;
-    var rows = h.rows || [];
-    var tb = $("hist-table").querySelector("tbody");
-    /* newest first, capped for the table — the chart always plots everything */
-    rows.slice().reverse().slice(0, 20).forEach(function (r) {
-      var tr = document.createElement("tr");
-      [txt(r.date), disp(r.core), disp(r.investment)].forEach(function (v) {
-        var td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
-      });
-      tb.appendChild(tr);
-    });
-    drawChart(rows);
-  }
-
-  function drawChart(rows) {
-    var svg = $("hist-chart");
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-    var W = 960, H = 260, PL = 44, PR = 12, PT = 14, PB = 26;
-    var pts = [];
-    rows.forEach(function (r) {
-      var c = rawNum(r.core), i = rawNum(r.investment);
-      if (c !== null || i !== null) pts.push({ d: r.date, c: c, i: i });
-    });
-    if (!pts.length) return;
-    var lo = 100, hi = 0;
-    pts.forEach(function (p) {
-      [p.c, p.i].forEach(function (v) { if (v !== null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
-    });
-    if (hi - lo < 10) { hi += 5; lo -= 5; }
-    lo = Math.max(0, Math.floor(lo - 2)); hi = Math.min(100, Math.ceil(hi + 2));
-    function X(k) { return PL + (W - PL - PR) * (pts.length === 1 ? 0.5 : k / (pts.length - 1)); }
-    function Y(v) { return PT + (H - PT - PB) * (1 - (v - lo) / (hi - lo)); }
-
-    var grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    for (var g = 0; g <= 4; g++) {
-      var val = lo + (hi - lo) * g / 4;
-      var y = Y(val);
-      var ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      ln.setAttribute("x1", PL); ln.setAttribute("x2", W - PR);
-      ln.setAttribute("y1", y); ln.setAttribute("y2", y);
-      ln.setAttribute("stroke", "#e2e6ec"); ln.setAttribute("stroke-width", "1");
-      grid.appendChild(ln);
-      var tx = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      tx.setAttribute("x", PL - 6); tx.setAttribute("y", y + 4);
-      tx.setAttribute("text-anchor", "end"); tx.setAttribute("font-size", "10");
-      tx.setAttribute("fill", "#6b7684");
-      /* axis labels also obey the display contract */
-      tx.textContent = disp({ r: String(val), d: (Math.round(val * 100) / 100).toFixed(2) });
-      grid.appendChild(tx);
+  function findModel(bank, id) {
+    var list = bank.models || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].model_id === id) return list[i]; }
+    for (var j = 0; j < list.length; j++) {
+      if (list[j].selection_role === "DEFAULT") return list[j];
     }
-    svg.appendChild(grid);
-
-    function path(get) {
-      var dstr = "";
-      pts.forEach(function (p, k) {
-        var v = get(p); if (v === null) return;
-        dstr += (dstr ? " L" : "M") + X(k).toFixed(2) + " " + Y(v).toFixed(2);
-      });
-      var pa = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      pa.setAttribute("d", dstr); pa.setAttribute("fill", "none");
-      pa.setAttribute("stroke-width", "1.6");
-      return pa;
-    }
-    var pc = path(function (p) { return p.c; });
-    pc.setAttribute("stroke", "#b32b2b"); svg.appendChild(pc);
-    var pi = path(function (p) { return p.i; });
-    pi.setAttribute("stroke", "#2f6fb5"); svg.appendChild(pi);
-
-    var lab = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    lab.setAttribute("x", PL); lab.setAttribute("y", H - 6);
-    lab.setAttribute("font-size", "10"); lab.setAttribute("fill", "#6b7684");
-    lab.textContent = pts[0].d + " → " + pts[pts.length - 1].d;
-    svg.appendChild(lab);
-    STATE.chartState = { points: pts.length };
+    return list[0];
   }
 
-  /* --------------------------------------------------------------- load */
-  function loadModel(keepDate) {
-    var m = currentModel();
-    if (!m) return Promise.resolve();
-    var base = DATA_ROOT + "/" + STATE.bank + "/" + m.data_dir;
-    return fetchJson(base + "/index.json").then(function (ix) {
-      STATE.index = ix;
-      if (!keepDate || !STATE.date) STATE.date = ix.latest_score_date;
-      renderDateSelector();
-      renderLimits(ix);
-      return Promise.all([
-        fetchJson(base + "/history.json"),
-        loadDay(STATE.date)
-      ]);
-    }).then(function (res) {
-      STATE.history = res[0];
-      STATE.day = res[1];
-      renderHistory();
-      renderDay();
+  /* §23 —— 外壳直接挂到 <body> 下：body 的可见子节点序列与黄金页一致
+     （第一个可见子节点就是 .wrap），几何清单不会产生额外的容器节点。 */
+  function cloneShell() {
+    var tpl = document.getElementById("shell-tpl");
+    var body = document.body;
+    var prev = body.querySelectorAll(":scope > .wrap");
+    for (var i = 0; i < prev.length; i++) { body.removeChild(prev[i]); }
+    body.appendChild(tpl.content.cloneNode(true));
+  }
+
+  function paintIdentity(model) {
+    var meta = model.model_meta || {};
+    var scope = document.getElementById("top-scope");
+    if (scope) scope.textContent = meta.scope_label_zh || "";
+    var role = document.getElementById("top-role");
+    if (role) role.textContent = meta.role_label_zh || "";
+    var up = document.getElementById("top-updated");
+    if (up) {
+      var last = (model.main_title || {}).latest_date;
+      up.textContent = last ? ("最新交易日 " + last) : "—";
+    }
+    document.title = "招商银行量化评分 · " + (meta.model_id || "") +
+                     " · " + (meta.status_label_zh || "");
+  }
+
+  /* ---------------------------------------------------------------- loading */
+  function dayUrl(bank, model, year) {
+    return "assets/data/" + bank + "/" + model + "/days/" + year + ".json";
+  }
+
+  function loadYear(bank, model, year, then) {
+    var key = bank + "/" + model + "/" + year;
+    if (LOADED[key]) { if (then) then(); return; }
+    if (LOADING[key]) return;
+    LOADING[key] = true;
+    getJSON(dayUrl(bank, model, year)).then(function (chunk) {
+      var days = STATE.payload.days = STATE.payload.days || {};
+      var map = STATE.payload.display_map = STATE.payload.display_map || {};
+      var pmap = STATE.payload.display_map_pct =
+        STATE.payload.display_map_pct || {};
+      var raw = STATE.payload.raw_precision =
+        STATE.payload.raw_precision || {};
+      Object.keys(chunk.days || {}).forEach(function (d) {
+        days[d] = chunk.days[d];
+      });
+      /* §19 / §55 — the year chunk ships its own authoritative display map so
+         the browser still never formats a business number itself. */
+      Object.keys(chunk.display_map || {}).forEach(function (k) {
+        map[k] = chunk.display_map[k];
+      });
+      Object.keys(chunk.display_map_pct || {}).forEach(function (k) {
+        pmap[k] = chunk.display_map_pct[k];
+      });
+      Object.keys(chunk.raw_precision || {}).forEach(function (k) {
+        raw[k] = chunk.raw_precision[k];
+      });
+      LOADED[key] = true;
+      delete LOADING[key];
+      if (then) then();
+    }).catch(function () {
+      LOADED[key] = true;               /* honest: no detail for that year */
+      delete LOADING[key];
+      if (then) then();
     });
   }
 
-  function loadDay(date) {
-    var m = currentModel();
-    var base = DATA_ROOT + "/" + STATE.bank + "/" + m.data_dir;
-    var ix = STATE.index;
-    if (date === ix.latest_score_date) return fetchJson(base + "/latest.json");
+  /* The shell asks for a day it does not have yet (§26 lazy detail). */
+  window.__CMB_REQUEST_DAY__ = function (date) {
+    if (!STATE.payload || !STATE.payload.days_lazy) return;
     var year = String(date).slice(0, 4);
-    if (STATE.yearCache[year]) return Promise.resolve(pickDay(STATE.yearCache[year], date));
-    return fetchJson(base + "/days/" + year + ".json").then(function (arr) {
-      STATE.yearCache[year] = arr;
-      return pickDay(arr, date);
+    var key = STATE.bank + "/" + STATE.model + "/" + year;
+    if (LOADED[key] || LOADING[key]) return;
+    loadYear(STATE.bank, STATE.model, year, function () {
+      if (typeof window.__CMB_SHELL_RERENDER__ === "function") {
+        window.__CMB_SHELL_RERENDER__(date);
+      }
     });
-  }
+  };
 
-  function pickDay(arr, date) {
-    for (var i = 0; i < arr.length; i++) if (arr[i].score_date === date) return arr[i];
-    return null;
-  }
+  function applyModel(bankId, modelId, push) {
+    var bank = findBank(STATE.banks, bankId);
+    var model = findModel(bank, modelId);
+    STATE.bank = bank.institution_id;
+    STATE.model = model.model_id;
 
-  function switchTo(bank, model, opts) {
-    opts = opts || {};
-    var modelChanged = (model !== STATE.model) || (bank !== STATE.bank);
-    STATE.bank = bank; STATE.model = model;
-    if (modelChanged) { STATE.yearCache = {}; STATE.date = null; }
-    clearAll();
-    renderBankSelector(); renderModelSelector(); renderBadges();
-    pushUrl(!!opts.replace);
-    return loadModel(false).then(function () {
-      document.title = bank + " · " + model + " · 量化评分研究看板";
-    });
-  }
+    cloneShell();
+    var bankSel = document.getElementById("bank-select");
+    var modelSel = document.getElementById("model-select");
+    fill(bankSel, bankEntries(STATE.banks), STATE.bank);
+    fill(modelSel, modelEntries(bank), STATE.model);
+    bankSel.onchange = function () { applyModel(bankSel.value, null, true); };
+    modelSel.onchange = function () { applyModel(STATE.bank, modelSel.value, true); };
 
-  /* --------------------------------------------------------------- init */
-  function boot() {
-    return fetchJson(DATA_ROOT + "/banks.json").then(function (b) {
-      STATE.banks = b;
-      var p = urlParams();
-      /* §10 — a fresh root load ALWAYS defaults to CMB + V3.  Saved state is
-         never allowed to flip the default; only an explicit URL may. */
-      var bank = p.bank && hasBank(b, p.bank) ? p.bank : FRESH_ROOT_DEFAULTS.bank;
-      var model = (p.model && hasModel(b, bank, p.model)) ? p.model : FRESH_ROOT_DEFAULTS.model;
-      STATE.bank = bank; STATE.model = model; STATE.date = p.date || null;
-      renderBankSelector(); renderModelSelector(); renderBadges();
-      return loadModel(!!STATE.date).then(function () {
-        $("foot-meta").textContent = "Bank " + bank + " · Model " + model +
-          " · 数据由本地预计算产物生成，浏览器不参与评分。";
-        document.title = bank + " · " + model + " · 量化评分研究看板";
+    var base = "assets/data/" + STATE.bank + "/" + STATE.model + "/";
+    return getJSON(base + "view.json").then(function (view) {
+      return getJSON(base + "index.json").then(function (ix) {
+        view.days = view.days || {};
+        view.days_lazy = ix.days_lazy !== false;
+        view.model_meta = view.model_meta || {};
+        Object.keys(ix.model_meta || {}).forEach(function (k) {
+          if (view.model_meta[k] === undefined) view.model_meta[k] = ix.model_meta[k];
+        });
+        STATE.payload = view;
+        var latest = (view.dates || [])[(view.dates || []).length - 1];
+        var year = String(latest || "").slice(0, 4);
+        var ready = function () {
+          paintIdentity(view);
+          window.__CMB_SHELL_BOOT__(view);
+          if (push) {
+            var url = "?bank=" + STATE.bank + "&model=" + STATE.model;
+            if (location.search !== url) history.pushState({}, "", url);
+          }
+        };
+        if (view.days_lazy && year) { loadYear(STATE.bank, STATE.model, year, ready); }
+        else { ready(); }
       });
     });
   }
 
-  function hasBank(b, id) {
-    return b.banks.some(function (x) { return x.institution_id === id; });
-  }
-  function hasModel(b, bankId, modelId) {
-    var f = null;
-    b.banks.forEach(function (x) { if (x.institution_id === bankId) f = x; });
-    return !!f && f.models.some(function (m) { return m.model_id === modelId; });
+  function start() {
+    getJSON(REGISTRY).then(function (reg) {
+      STATE.banks = reg;
+      var bank = qs("bank") || reg.default_institution_id ||
+                 reg.default_bank_id ||
+                 ((reg.banks || [])[0] || {}).institution_id;
+      var model = qs("model") || null;
+      applyModel(bank, model, false);
+    }).catch(function (err) {
+      /* 加载失败时才有这个节点；正常路径下 body 的可见子节点只有 .wrap。 */
+      var box = document.createElement("div");
+      box.className = "mod-partial";
+      box.textContent = "公开产物加载失败：" + err.message;
+      document.body.appendChild(box);
+    });
   }
 
   window.addEventListener("popstate", function () {
-    var p = urlParams();
-    switchTo(p.bank || FRESH_ROOT_DEFAULTS.bank,
-             p.model || FRESH_ROOT_DEFAULTS.model, { replace: true });
+    if (!STATE.banks) return;
+    applyModel(qs("bank") || STATE.bank, qs("model") || STATE.model, false);
   });
 
-  document.addEventListener("DOMContentLoaded", function () {
-    $("bank-select").addEventListener("change", function (e) {
-      var b = e.target.value;
-      var first = STATE.banks.banks.filter(function (x) { return x.institution_id === b; })[0];
-      var def = first ? first.default_model_id : FRESH_ROOT_DEFAULTS.model;
-      switchTo(b, def);
-    });
-    $("model-select").addEventListener("change", function (e) {
-      switchTo(STATE.bank, e.target.value);
-    });
-    $("date-select").addEventListener("change", function (e) {
-      STATE.date = e.target.value;
-      pushUrl(false);
-      loadDay(STATE.date).then(function (d) { STATE.day = d; renderDay(); });
-    });
-    boot().catch(function (err) {
-      var m = document.createElement("pre");
-      m.style.color = "#b32b2b";
-      m.textContent = "LOAD_FAILED: " + err.message;
-      $("main").appendChild(m);
-      throw err;
-    });
-  });
-
-  window.__APP_STATE__ = STATE;
+  start();
 })();

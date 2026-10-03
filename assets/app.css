@@ -1,112 +1,660 @@
+/* =====================================================================
+ * CMB_FRONTEND_V2 — stylesheet
+ *
+ * DESIGN LANGUAGE SOURCE
+ *   SOURCE_V6_ACTUAL_IMPLEMENTATION:
+ *     design tokens, card shell, radius, shadow, spacing, typography,
+ *     .scale-track / .scale-fill gradient, .score-tone-text-* colour,
+ *     .judgement-zone 3-part structure, .signal-table, .selector-panel,
+ *     .kpi-grid / .kpi-card, .score-row / .score-bar-fill,
+ *     .historical-total100-chart-scroll{overflow-x:auto} + .chart-shell{min-width}
+ *     breakpoints (860 / 720 / 560 / 479)
+ *     dual-canvas history chart (.score-canvas + .chart-crosshair + .chart-tooltip)
+ *     Verified read-only against the V6 reference project's
+ *     frontend/src/styles.css and frontend/src/components.jsx
+ *     (scoreTone(), SignalDisplayCard, ScoreHistoryChart, AssessmentCard).
+ *     NOTE: the V6 absolute path is deliberately NOT reproduced here —
+ *     LOCAL_ABSOLUTE_PATH is a forbidden pattern in every public artifact.
+ *   CMB_SPECIFIC_ADAPTATION:
+ *     bank selector, dimension section cards, metric group cards,
+ *     threshold evolution chart, resonance summary, V2-only helpers,
+ *     watermark TEXT (V6 branding replaced by the CMB study subject).
+ */
 :root {
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --ink: #1c2430;
-  --muted: #6b7684;
-  --line: #e2e6ec;
-  --accent: #b32b2b;
-  --accent-soft: #f6e7e7;
-  --up: #c0392b;
-  --down: #1e8e5a;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0; background: var(--bg); color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  font-size: 15px; line-height: 1.55;
-}
-.topbar { background: var(--panel); border-bottom: 1px solid var(--line); padding: 18px 20px 14px; }
-.topbar h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
-.topbar .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  --bg:#f3f4f6; --card:#fff; --bd:rgba(0,0,0,.07); --text:#111827;
+  --red:#dc2626; --green:#059669; --blue:#2563eb; --amber:#d97706;
+  --purple:#7c3aed; --muted:#6b7280; --weak:#9ca3af; --line:#e5e7eb;
+  --shadow:0 1px 4px rgba(0,0,0,.06),0 0 0 .5px rgba(0,0,0,.04);
+  --light-green:#d1fae5; --light-amber:#fef3c7; --light-red:#fee2e2;
+  --light-blue:#dbeafe; --light-purple:#ede9fe;
+  --input-bg:#f9fafb; --selector-bg:#f8f5ff; --selector-bd:#e9d5ff;
 
-.selectors {
-  display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end;
-  padding: 16px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
-}
-.sel { display: flex; flex-direction: column; min-width: 180px; flex: 1 1 220px; max-width: 340px; }
-.sel label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-.sel select {
-  appearance: none; -webkit-appearance: none;
-  padding: 9px 30px 9px 10px; font-size: 15px; color: var(--ink);
-  background: #fff; border: 1px solid var(--line); border-radius: 6px;
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%;
-  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
-}
-.sel select:focus-visible, .sel select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.badges { display: flex; gap: 8px; align-items: center; flex: 0 0 auto; }
-.badge {
-  font-size: 12px; padding: 4px 10px; border-radius: 999px;
-  background: var(--accent-soft); color: var(--accent); border: 1px solid #e8cece;
-}
-.badge.ghost { background: #eef1f5; color: var(--muted); border-color: var(--line); }
+  /* CMB_SCORE_COLOR_ENGINE_V1 — gradient stops lifted verbatim from
+     V6 .scale-fill (SOURCE_V6_ACTUAL_IMPLEMENTATION). */
+  --score-gradient:linear-gradient(to right,var(--red) 0%,#f59e0b 40%,#fcd34d 60%,#34d399 80%,var(--green) 100%);
+  --score-grad-0:#dc2626; --score-grad-40:#f59e0b; --score-grad-60:#fcd34d;
+  --score-grad-80:#34d399; --score-grad-100:#059669;
 
-main { padding: 18px 20px 40px; max-width: 1180px; margin: 0 auto; }
-.no-overall {
-  background: #fff8e6; border: 1px solid #f0dfae; color: #7a5c10;
-  padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 0 0 16px;
+  color:var(--text); background:var(--bg);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-synthesis:none;
 }
-.hero { display: flex; gap: 16px; flex-wrap: wrap; }
-.hero .card {
-  flex: 1 1 320px; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: 16px 18px;
-}
-.hero h2 { margin: 0 0 6px; font-size: 14px; color: var(--muted); font-weight: 600; }
-.hero .big { font-size: 40px; font-weight: 700; letter-spacing: -1px; }
-.hero .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* =====================================================================
+ * V6 WATERMARK — SOURCE_V6_ACTUAL_IMPLEMENTATION
+ *   V6 styles.css :: .card::after,.score-hero::after{
+ *     content:"<V6_SOURCE_STRING_NOT_REUSED>"; position:absolute; left:52%; top:66%;
+ *     z-index:99; transform:translate(-50%,-50%) rotate(-45deg);
+ *     color:rgba(100,100,100,.13); font-size:20px; font-weight:600;
+ *     line-height:1; letter-spacing:.4px; white-space:nowrap;
+ *     pointer-events:none; user-select:none }
+ *   Every visual property below is byte-identical to V6 (font-size, weight,
+ *   colour/alpha, rotation, letter-spacing, line-height, position, z-index,
+ *   pointer-events, user-select, nowrap).
+ *
+ * FIX-A / S45-S46: the user has now authorised the ONE production watermark
+ * string below.  It is the ONLY runtime watermark on the page; the previous
+ * CMB study-subject watermark is fully removed (no residue anywhere).
+ * ===================================================================== */
+.card::after,.score-hero::after{
+  content:"公众号@纳指红利养老之路";
+  position:absolute;left:52%;top:66%;z-index:99;
+  transform:translate(-50%,-50%) rotate(-45deg);
+  color:rgba(100,100,100,.13);
+  font-size:20px;font-weight:600;line-height:1;letter-spacing:.4px;
+  white-space:nowrap;pointer-events:none;user-select:none}
+html{overflow-x:hidden;background:var(--bg);scroll-behavior:smooth}
+h1{font-size:20px;font-weight:700}
+body{min-height:100vh;padding:16px;overflow-x:hidden;background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+button,input,select{font:inherit} button{color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
 
-.panel {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: 14px 18px 18px; margin-top: 16px;
-}
-.panel h3 { margin: 0 0 10px; font-size: 15px; }
-.modules { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.modules .mod {
-  background: #f4f6f9; border: 1px solid var(--line); border-radius: 6px;
-  padding: 6px 10px; font-size: 12px;
-}
-.modules .mod b { font-size: 14px; }
+.wrap{max-width:1320px;margin:0 auto}
+.card{position:relative;width:100%;margin-bottom:12px;padding:16px;overflow:hidden;
+  border:.5px solid var(--bd);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:700;line-height:1.2;
+  margin-bottom:12px;padding-left:10px;border-left:3px solid var(--purple)}
+.card-title .ord{margin-right:6px;color:var(--purple)}
+.card-subtitle{margin:-6px 0 12px 13px;color:var(--muted);font-size:10px;line-height:1.5}
+.hint{color:var(--muted);font-size:10px;line-height:1.5}
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th, .tbl td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; }
-.tbl th { color: var(--muted); font-weight: 600; font-size: 12px; }
-.tbl td.num, .tbl th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.tbl td { font-variant-numeric: tabular-nums; }
+/* ---------- A. top status ---------- */
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
+  margin-bottom:12px;padding:10px 12px;border:.5px solid var(--selector-bd);border-radius:10px;
+  background:var(--selector-bg);font-size:11px}
+.topbar .left{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+.topbar .right{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
+  background:var(--light-purple);color:#5b21b6;font-size:10px;font-weight:700;white-space:nowrap}
+.badge.mono{background:var(--input-bg);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
-.kv { display: grid; grid-template-columns: 200px 1fr; gap: 6px 14px; font-size: 13px; }
-.kv .k { color: var(--muted); }
-.kv .v { font-variant-numeric: tabular-nums; word-break: break-all; }
+/* ---------- B. bank selector ---------- */
+.selector-panel{margin-bottom:14px;padding:12px;border:.5px solid var(--selector-bd);
+  border-radius:10px;background:linear-gradient(135deg,var(--selector-bg),#fafafa)}
+.selector-title{margin-bottom:8px;color:var(--purple);font-size:11px;font-weight:700}
+.selector-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,240px);gap:8px}
+.selector-controls select{width:100%;min-width:0;min-height:40px;padding:0 11px;
+  border:1px solid #ddd6fe;border-radius:8px;background:var(--card);color:#374151;
+  font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace}
+.selector-status{margin-top:8px;color:var(--muted);font-size:10px}
+.selector-current{margin-top:5px;color:#5b21b6;font-size:10px;font-weight:700}
 
-.chart-wrap { width: 100%; overflow: hidden; }
-#hist-chart { width: 100%; height: 260px; display: block; }
+/* ---------- D. hero ---------- */
+/* V6 parity: hero card height 290.5px — min-height so the richer CMB hero can never clip. */
+.score-hero{position:relative;min-height:290.5px;margin-bottom:16px;padding:20px;overflow:hidden;
+  border:.5px solid var(--bd);border-radius:16px;background:var(--card);box-shadow:var(--shadow);text-align:center}
+.hero-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-bottom:6px}
+.hero-label{color:var(--muted);font-size:12px;font-weight:600}
+.hero-bank{font-size:15px;font-weight:700;color:var(--text)}
+.hero-code{color:var(--muted);font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.score-hero h2{color:var(--muted);font-size:17.5px;font-weight:700}
+.hero-value{display:flex;align-items:baseline;justify-content:center;gap:4px;margin:5px 0 4px}
+/* V6 parity: .score-big{font:700 72px/1 monospace;font-variant-numeric:tabular-nums} */
+.score-big{font-size:72px;font-weight:700;line-height:1;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.hero-unit{color:var(--muted);font-size:16px;font-weight:600}
+.verdict-pill{display:inline-flex;align-items:center;gap:6px;margin:2px auto 7px;padding:6px 16px;
+  border-radius:20px;background:var(--light-amber);color:#92400e;font-size:13px;font-weight:600}
+.verdict-dot{width:7px;height:7px;border-radius:50%;background:var(--amber)}
+.scale-track{position:relative;height:8px;margin-bottom:4px;overflow:hidden;border-radius:99px;background:var(--line)}
+.score-hero>.scale-track{max-width:760px;margin:29px auto 4px}
+.scale-fill{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:var(--score-gradient);
+  transition:width .15s ease}
+/* AUTO29-01 ROOT CAUSE: the ticks used flex space-between, i.e. EVEN spacing,
+   so the 「70」 tick sat at 65.8% and a correct 69.97% fill visually overshot
+   it.  Every tick is now absolutely positioned at its TRUE proportional
+   offset: left == value% of the track width (0/30/45/60/70/85/100). */
+.scale-labels{position:relative;height:12px;max-width:760px;margin:0 auto;
+  color:var(--weak);font-size:9px}
+.scale-labels>span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.scale-labels>span:nth-child(1){left:0%;transform:none}
+.scale-labels>span:nth-child(2){left:30%}
+.scale-labels>span:nth-child(3){left:45%}
+.scale-labels>span:nth-child(4){left:60%}
+.scale-labels>span:nth-child(5){left:70%}
+.scale-labels>span:nth-child(6){left:85%}
+.scale-labels>span:nth-child(7){left:100%;transform:translateX(-100%)}
+.hero-tone-low{color:var(--red)!important}
+.hero-tone-middle{color:var(--amber)!important}
+.hero-tone-high{color:var(--green)!important}
+.hero-tone-unavailable{color:var(--weak)!important}
+.score-tone-text-low{color:var(--red)!important}
+.score-tone-text-middle{color:var(--amber)!important}
+.score-tone-text-high{color:var(--green)!important}
+.score-tone-text-unavailable{color:var(--muted)!important}
+.score-hero.score-tone-low .verdict-pill{color:#991b1b;background:var(--light-red)}
+.score-hero.score-tone-low .verdict-dot{background:var(--red)}
+.score-hero.score-tone-middle .verdict-pill{color:#92400e;background:var(--light-amber)}
+.score-hero.score-tone-middle .verdict-dot{background:var(--amber)}
+.score-hero.score-tone-high .verdict-pill{color:#065f46;background:var(--light-green)}
+.score-hero.score-tone-high .verdict-dot{background:var(--green)}
+.hero-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-width:760px;margin:12px auto 0}
+.hero-meta>div{min-width:0;padding:7px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg)}
+.hero-meta .k{display:block;color:var(--muted);font-size:9px}
+.hero-meta .v{display:block;margin-top:1px;font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;
+  overflow-wrap:anywhere;word-break:break-word}
+/* Fix 04: the three hero statistics (基础评分 / Risk Overlay / 实际得分). */
+.hero-stats>div{position:relative;z-index:1;padding:8px 7px;text-align:center}
+.hero-stats .k{font-size:10px}
+.hero-stats .v{margin-top:3px;font-size:19px;line-height:1.2}
 
-.foot { padding: 16px 20px 30px; color: var(--muted); font-size: 12px; max-width: 1180px; margin: 0 auto; }
-.foot p { margin: 4px 0; overflow-wrap: anywhere; word-break: break-word; }
+/* ---------- E. KPI (FIX-B: V6 typography, 5-card CMB adaptation) ----------
+ * V6 production evidence (frontend/src/styles.css):
+ *   .kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+ *   .kpi-card{padding:14px;border:.5px solid var(--bd);border-left:3px solid var(--purple);
+ *             border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+ *   .kpi-label{color:var(--muted);font-size:11px;font-weight:500}
+ *   .kpi-value{display:block;margin-top:4px;font:700 26px/1.1 monospace;
+ *              font-variant-numeric:tabular-nums}
+ *   .kpi-sub{margin-top:3px;color:var(--muted);font-size:11px}
+ *   @media(max-width:479px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+ * CMB_SPECIFIC_ADAPTATION: 5 dimensions instead of 4 -> 5 equal columns on
+ * desktop, 3+2 on tablet, 2 on mobile.  No horizontal overflow at any width.
+ */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.kpi-card{min-width:0;padding:14px;overflow:hidden;border:.5px solid var(--bd);
+  border-left:3px solid var(--purple);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+.kpi-card.score-tone-low{border-left-color:var(--red)}
+.kpi-card.score-tone-middle{border-left-color:var(--amber)}
+.kpi-card.score-tone-high{border-left-color:var(--green)}
+.kpi-card.score-tone-unavailable{border-left-color:var(--weak)}
+/* FIX-B / §31-§36: the ACTUAL score is the primary visual; the "/ 26"
+ * denominator is deleted from the user view (dimension_max still exists in the
+ * machine artifact and still drives the progress width).  Enlarged per
+ * §34: 32px desktop / 30px tablet / 28px mobile, monospace 700 tabular-nums. */
+.kpi-label{color:var(--muted);font-size:11px;font-weight:500}
+.kpi-value{display:block;margin-top:4px;font:700 32px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums;letter-spacing:-.5px;overflow-wrap:anywhere}
+.kpi-sub{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:400}
+.kpi-rate{display:block;margin-top:2px;color:var(--weak);font-size:11px;font-weight:400}
+.kpi-bar{margin-top:8px}
+/* §44-§45: Risk Overlay is NOT one of the five base dimensions, so it is
+ * visually separated (neutral left border) and carries no positive-score
+ * gradient bar — a penalty bar would invert the semantics. */
+.kpi-card.kpi-overlay{border-left-color:var(--weak)}
+.kpi-card.kpi-overlay .kpi-value{color:var(--text)}
+.metric-display{display:inline-block;padding:1px 7px;border-radius:8px;
+  background:var(--line);color:var(--text);font-size:11px}
+.metric-display b{font-weight:600;font-variant-numeric:tabular-nums}
+.glyph{color:var(--weak)}
 
-@media (max-width: 900px) {
-  .hero .big { font-size: 34px; }
-  .kv { grid-template-columns: 140px 1fr; }
+/* ---------- F~K. score rows / progress ---------- */
+.score-bar-wrap{position:relative;height:8px;margin-top:6px;overflow:hidden;border-radius:99px;background:var(--line)}
+.score-bar-fill{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:var(--score-gradient);transition:width .15s ease}
+.score-row{padding:9px 10px;border-top:.5px solid var(--line)}
+.score-row:first-child{border-top:0}
+.score-row-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.score-row-label{font-size:12px;font-weight:600;min-width:0}
+.score-row-label .mid{color:var(--weak);font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.score-row-score{flex:0 0 auto;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.score-row-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;color:var(--weak);font-size:8px}
+.score-row-meta .raw{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+.thr-chip{display:inline-block;padding:1px 6px;border-radius:6px;background:var(--input-bg);
+  border:.5px solid var(--line);color:var(--muted)}
+.thr-chip b{color:var(--text);font-weight:700}
+.dim-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.dim-head .dim-score{font:700 18px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.dim-head .dim-max{color:var(--weak);font-size:11px}
+.dim-card{margin-bottom:10px;padding:12px;border:.5px solid var(--bd);border-radius:10px;background:var(--card)}
+.dim-card.score-tone-low{border-left:3px solid var(--red)}
+.dim-card.score-tone-middle{border-left:3px solid var(--amber)}
+.dim-card.score-tone-high{border-left:3px solid var(--green)}
+.dim-card.score-tone-unavailable{border-left:3px solid var(--weak)}
+.dim-name{font-size:12px;font-weight:700}
+.section-label{padding:7px 10px;margin-bottom:8px;border-radius:8px;background:var(--light-purple);
+  color:var(--purple);font-size:11px;font-weight:700}
+
+/* ---------- L. judgement ---------- */
+.judgement-zone{margin:0 0 14px;padding:16px 18px;border:1px solid #d8b4fe;border-radius:14px;background:#f5f3ff}
+.judgement-zone.positive{border-color:#a7f3d0;background:#f0fdf4}
+.judgement-zone.negative{border-color:#fecaca;background:#fff7f7}
+.judgement-zone.positive h3{color:#047857}
+.judgement-zone.negative h3{color:#b91c1c}
+.judgement-zone h3{color:var(--purple);font-size:13px}
+.judgement-zone ul{margin-top:8px;padding-left:0;list-style:none;display:grid;gap:7px}
+.judgement-zone li{display:flex;gap:7px;color:#374151;font-size:11px;line-height:1.6}
+.factor-dot{flex:0 0 7px;width:7px;height:7px;margin-top:5px;border-radius:50%;background:var(--purple)}
+.judgement-zone.positive .factor-dot{background:var(--green)}
+.judgement-zone.negative .factor-dot{background:var(--red)}
+.factor-trace{display:block;margin-top:2px;color:var(--weak);font:500 9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.interpretation-boundary{margin-top:9px;color:var(--muted);font-size:9.5px;line-height:1.55}
+
+/* ---------- M. resonance ---------- */
+.signal-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;
+  padding:8px 10px;border:.5px solid var(--selector-bd);border-radius:8px;background:var(--selector-bg);font-size:10px}
+.signal-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+.signal-table col:nth-child(1){width:22%}.signal-table col:nth-child(2){width:26%}
+.signal-table col:nth-child(3){width:26%}.signal-table col:nth-child(4){width:26%}
+.signal-table th{color:var(--muted);background:var(--input-bg);font-weight:700;text-align:left}
+.signal-table th,.signal-table td{padding:6px;border-bottom:.5px solid var(--line);font-size:11px}
+.signal-table tr.is-current{background:var(--light-purple)}
+.dot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:var(--weak)}
+.dot.green{background:var(--green)}.dot.amber{background:var(--amber)}.dot.red{background:var(--red)}
+.dot.purple{background:var(--purple)}
+.current-badge{margin-left:6px;padding:1px 7px;border-radius:99px;background:var(--purple);color:#fff;font-size:9px;font-weight:700}
+.resonance-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.resonance-counts>div{padding:8px 9px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg);text-align:center}
+.resonance-counts small{display:block;color:var(--muted);font-size:9px}
+.resonance-counts strong{display:block;margin-top:3px;font:700 18px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.resonance-counts .c-positive strong{color:var(--green)}
+.resonance-counts .c-neutral strong{color:var(--amber)}
+.resonance-counts .c-weak strong{color:#b45309}
+.resonance-counts .c-risk strong{color:var(--red)}
+.score-signal-explanation{display:grid;gap:3px;margin-top:10px}
+.score-signal-explanation strong{font-size:11px}
+.score-signal-explanation span{color:var(--muted);font-size:9.5px}
+
+/* ---------- N. history ---------- */
+.historical-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:10px 0;
+  padding:10px 12px;border:.5px solid var(--selector-bd);border-radius:10px;background:var(--selector-bg)}
+.index-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;min-width:230px}
+.index-tabs button{min-height:34px;padding:0 9px;border:1px solid #ddd6fe;border-radius:7px;
+  background:var(--card);color:#5b21b6;font-size:11px;font-weight:700}
+.index-tabs button.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+.history-date-filter{display:flex;gap:7px;flex-wrap:wrap}
+.history-date-filter label{display:grid;gap:3px;color:var(--muted);font-size:9px}
+.history-date-filter input{min-width:126px;height:34px;padding:0 7px;border:1px solid #ddd6fe;border-radius:7px;
+  background:var(--card);color:#374151;font:650 11px ui-monospace,SFMono-Regular,Menlo,monospace}
+.chart-scroll{margin-bottom:10px;overflow-x:auto}
+.chart-shell{position:relative;min-width:620px;padding:8px;overflow:hidden;border:.5px solid var(--bd);
+  border-radius:10px;background:var(--card)}
+/* V6 parity (New 11): the base canvas keeps the same size box, while a second
+   absolutely-positioned canvas draws the crosshair.  SOURCE_V6_ACTUAL_IMPLEMENTATION:
+   .chart-crosshair{position:absolute;inset:8px;z-index:2;width:calc(100% - 16px);
+   height:220px;max-width:none;pointer-events:none}
+   + .chart-tooltip{position:absolute;top:12px;right:12px;z-index:3;width:auto;
+   max-width:240px;color:var(--text);font:700 11px/1.45 monospace;white-space:nowrap;
+   pointer-events:none} */
+.score-canvas{display:block;width:100%;height:240px;max-width:none;
+  cursor:crosshair;touch-action:pan-x pan-y}
+.chart-crosshair{position:absolute;inset:8px;z-index:2;width:calc(100% - 16px);
+  height:240px;max-width:none;pointer-events:none}
+.chart-tooltip{position:absolute;top:12px;right:12px;z-index:3;width:auto;max-width:240px;
+  color:var(--text);font:700 11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:nowrap;pointer-events:none;
+  padding:5px 8px;border:.5px solid var(--bd);border-radius:8px;
+  background:rgba(255,255,255,.92);box-shadow:var(--shadow)}
+.chart-tooltip span,.chart-tooltip strong{display:block}
+.chart-empty{display:grid;min-height:200px;place-items:center;color:var(--muted);font-size:11px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;color:var(--muted);font-size:10px}
+.chart-legend i{display:inline-block;width:18px;height:3px;margin-right:5px;border-radius:2px;vertical-align:middle}
+.chart-legend .lg-fixed{background:var(--purple)}
+.chart-legend .lg-shadow{background:var(--blue);opacity:.85}
+.chart-legend .lg-price{background:#9ca3af}
+.history-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.history-summary>div{padding:8px 9px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg)}
+.history-summary small{display:block;color:var(--muted);font-size:9px}
+.history-summary strong{display:block;margin-top:3px;font:700 13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
+.toggle-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px;color:var(--muted);font-size:10px}
+.toggle-row label{display:inline-flex;align-items:center;gap:5px}
+
+/* ---------- O. threshold research ---------- */
+.threshold-panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--input-bg)}
+.threshold-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.threshold-heading strong{font-size:14px}
+.threshold-heading span{color:var(--muted);font-size:10px}
+.threshold-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.threshold-grid>div{padding:8px 9px;border:.5px solid var(--bd);border-radius:8px;background:var(--card)}
+.threshold-grid small{display:block;color:var(--muted);font-size:9px}
+.threshold-grid strong{display:block;margin-top:3px;font:700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
+.status-note{margin-top:10px;padding:9px 11px;border-left:3px solid var(--blue);border-radius:8px;background:var(--light-blue)}
+.status-note strong{color:#1e3a8a;font:700 10px ui-monospace,SFMono-Regular,Menlo,monospace}
+.status-note span{display:block;margin-top:3px;color:#475569;font-size:10px;line-height:1.5}
+
+/* ---------- tables / pills ---------- */
+.td-name{font-weight:600}
+.td-sub{color:var(--weak);font-size:9px}
+.num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}
+.muted{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;white-space:nowrap}
+.pill-ok{background:var(--light-green);color:var(--green)}
+.pill-warn{background:var(--light-amber);color:var(--amber)}
+.pill-err{background:var(--light-red);color:var(--red)}
+.pill-neutral{color:var(--muted);background:var(--input-bg)}
+.pill-info{color:#1e40af;background:var(--light-blue)}
+.banner{margin:0 0 12px;padding:10px 12px;border-radius:10px;font-size:11px;line-height:1.6}
+.banner-err{color:#991b1b;background:var(--light-red);border:1px solid #fecaca}
+.banner-warn{color:#92400e;background:var(--light-amber);border:1px solid #fde68a}
+.banner-neutral{color:var(--muted);background:var(--input-bg);border:1px solid var(--line)}
+.skeleton{display:inline-block;border-radius:6px;background:linear-gradient(90deg,#eef0f3 25%,#e3e6ea 37%,#eef0f3 63%);
+  background-size:400% 100%;animation:sk 1.4s ease infinite}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-height:1.7;text-align:center}
+.risk-note{margin-top:10px;padding:9px 11px;border-left:3px solid var(--amber);border-radius:8px;background:var(--light-amber)}
+.risk-note strong{display:block;color:#92400e;font-size:10px}
+.risk-note span{display:block;margin-top:3px;color:#78350f;font-size:10px;line-height:1.55}
+
+/* ---------- Identity Meta Block (§12-§16) ----------
+ * SUPERSEDED_BY_USER_DECISION_20260929: the 2026-09-28 standalone page-top
+ * header block is gone.  V6 header typography is kept (line 1 strong,
+ * line 2 weaker) but the block is deliberately NOT a card: no background,
+ * no border, no shadow, no watermark (§14).  It lives between the C
+ * date-entry card and the D hero (§12-§13).
+ */
+.identity-meta{margin:18px 0 14px;padding:0 4px;text-align:left}
+.identity-line1{font-size:20px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.identity-line2{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.55;
+  overflow-wrap:anywhere}
+
+/* ---------- C. hierarchical date selector (FIX-D) ---------- */
+.date-selector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.date-field{min-width:0}
+.date-field label{display:block;margin-bottom:3px;color:var(--muted);font-size:10px;font-weight:500}
+.date-field select{width:100%;min-width:0;padding:6px 8px;border:.5px solid var(--bd);
+  border-radius:8px;background:var(--card);color:var(--text);font-size:12px}
+.date-nav{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.btn-mini{padding:5px 9px;border:.5px solid var(--bd);border-radius:8px;background:var(--input-bg);
+  color:var(--text);font-size:11px;white-space:nowrap}
+.btn-mini:hover{background:var(--line)}
+.btn-mini:disabled{opacity:.45;cursor:not-allowed}
+.date-native{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.date-native label{color:var(--muted);font-size:10px}
+.date-native input{padding:5px 8px;border:.5px solid var(--bd);border-radius:8px;
+  background:var(--card);color:var(--text);font-size:12px}
+
+/* ---------- responsive (V6 breakpoints + V2 additions) ---------- */
+@media(max-width:1024px){
+  /* 6 cards: 3 columns x 2 rows (§48).  Value 30px (§34). */
+  .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpi-grid>.kpi-card{grid-column:span 1}
+  .kpi-value{font-size:30px}
+  .identity-line1{font-size:18px}
+  .hero-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .resonance-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .threshold-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-@media (max-width: 420px) {
-  main { padding: 14px 12px 30px; }
-  .selectors { padding: 12px; gap: 10px; }
-  .sel { min-width: 100%; max-width: none; }
-  .badges { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
-  .badge { white-space: normal; max-width: 100%; }
-  .kv { grid-template-columns: 1fr; gap: 2px; }
-  .kv .v { margin-bottom: 8px; }
-  .tbl { font-size: 12px; table-layout: fixed; }
-  .tbl th, .tbl td { padding: 6px 4px; word-break: break-word; }
-  /* the wide indicator tables scroll inside their own panel instead of
-     pushing the document wider than the viewport */
-  .panel { overflow-x: auto; }
+@media(max-width:860px){
+  .historical-toolbar{display:block}
+  .history-date-filter{flex-wrap:wrap;margin-top:9px}
+  .index-tabs{margin-top:9px}
+  .history-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-@media (max-width: 340px) {
-  .hero .big { font-size: 28px; }
-  .tbl { font-size: 11px; }
-  .tbl th, .tbl td { padding: 5px 3px; }
-  .tbl th:nth-child(5), .tbl td:nth-child(5),
-  .tbl th:nth-child(6), .tbl td:nth-child(6) { display: none; }
+@media(max-width:720px){
+  .score-big{font-size:48px}
+  .selector-controls{grid-template-columns:minmax(0,1fr)}
 }
+@media(max-width:720px){
+  .date-selector{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  /* 6 cards: 2 columns x 3 rows (§48).  Value 28px (§34 floor: mobile >= 26px). */
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-grid>.kpi-card{grid-column:span 1;padding:11px}
+  .kpi-value{font-size:28px}
+  .identity-line1{font-size:17px}
+  .identity-line2{font-size:11px}
+  .hero-meta{grid-template-columns:minmax(0,1fr)}
+  .resonance-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .threshold-grid{grid-template-columns:minmax(0,1fr)}
+  .signal-table col:nth-child(1){width:30%}.signal-table col:nth-child(2){width:24%}
+  .signal-table col:nth-child(3){width:23%}.signal-table col:nth-child(4){width:23%}
+  .signal-table th,.signal-table td{font-size:10px;padding:5px}
+}
+@media(max-width:479px){
+  /* §34-§35: the KPI value stays large (28px) at every width; only padding and
+     the grid collapse.  Never silently fall back to 26px. */
+  body{padding:10px}
+  .card{padding:12px}
+  .score-big{font-size:62px}   /* V6 @479 parity */
+  .card::after,.score-hero::after{font-size:15px}   /* V6 @479 watermark parity */
+  .score-canvas,.chart-crosshair{height:200px}      /* V6 @479 chart parity */
+  .hero-stats .v{font-size:16px}
+  .index-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .history-summary{grid-template-columns:minmax(0,1fr)}
+  .card-title{white-space:normal}
+}
+@media(max-width:390px){
+  .score-big{font-size:36px}
+  .chart-shell{min-width:520px}
+}
+@media(max-width:320px){
+  .score-big{font-size:32px}
+  .chart-shell{min-width:440px}
+  .resonance-counts{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ==========================================================================
+ * V2-ONLY ADDITIONS（inheritance_status = V1_1_ADAPTED_FOR_V2_STRUCTURE）
+ * --------------------------------------------------------------------------
+ * V1.1 = 1 Hero + 6 KPI 卡；V2 = 2 Hero（Core/Investment）+ 4 Core 模块卡
+ * + 2 Investment 子模块卡 + Forward/Overlay 卡。下面仅为「V1.1 没有对应列数」
+ * 与「V2 特有业务组件」补齐，未改动任何 V1.1 既有 token。
+ * ========================================================================== */
+.kpi-grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpi-grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:1024px){.kpi-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.kpi-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi-grid-2{grid-template-columns:minmax(0,1fr)}}
+
+/* Forward（NO_SCORE）：只做状态表达，禁止数字总分与 0~100 色带 */
+.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;
+  font-size:11px;font-weight:800;white-space:nowrap;color:var(--muted);background:var(--input-bg)}
+.chip.c-IMPROVING{color:#065f46;background:var(--light-green)}
+.chip.c-STABLE{color:#1e40af;background:var(--light-blue)}
+.chip.c-DETERIORATING{color:#991b1b;background:var(--light-red)}
+.chip.c-INSUFFICIENT_EVIDENCE{color:#92400e;background:var(--light-amber)}
+.chip.c-CONFLICTING_EVIDENCE{color:#5b21b6;background:var(--light-purple)}
+.chip.c-STALE{color:#92400e;background:var(--light-amber)}
+.warnbox{margin-top:8px;padding:9px 11px;border-left:3px solid var(--amber);
+  border-radius:8px;background:var(--light-amber);color:#78350f;font-size:10px;line-height:1.55}
+.ev{margin-top:10px;overflow-x:auto}
+.metric-count{color:var(--weak);font-size:9px}
+/* 扩展历史（研究）：次级虚线，默认 OFF，与正式实线严格区分 */
+.legend-dash{display:inline-block;width:18px;height:0;margin-right:5px;
+  border-top:2px dashed var(--weak);vertical-align:middle}
+.research-flag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;
+  background:var(--light-amber);color:#92400e;font-size:9px;font-weight:800}
+
+/* ---- 日期日历面板（§B 真正可直接选择日期）----
+ * V1.1 只有「日期直达」原生 input；headless / 无鼠标场景与可读性都要求一个
+ * 可直接点选的日历。全部 token 取自 V1.1（--card / --line / --input-bg /
+ * --purple / --light-purple / --muted / --weak），未引入新色值。 */
+.date-picker{margin-top:8px}
+.cal-panel{margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;
+  background:var(--card);box-shadow:var(--shadow);max-width:320px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-bottom:8px;font-size:12px;font-weight:700;color:var(--text)}
+.cal-title{font-variant-numeric:tabular-nums}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-w{text-align:center;font-size:10px;font-weight:700;color:var(--weak);padding:2px 0}
+.cal-day{padding:6px 0;text-align:center;font-size:11px;font-weight:700;
+  font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;
+  background:var(--input-bg);color:var(--text);cursor:pointer}
+.cal-day:hover:not(:disabled){background:var(--light-purple)}
+.cal-day:disabled{color:var(--weak);background:transparent;cursor:not-allowed;opacity:.45}
+.cal-day.sel{background:var(--purple);border-color:var(--purple);color:#fff}
+.cal-foot{margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5}
+
+/* ---- 模块小计（§6-§18：Core 四模块 / Investment 两子模块）----
+ * 信息层次取自 V1.1 / V6「估值面 · 34分」+「DID+PB 合计  14.17 / 34」语义：
+ *   模块标题条（名称 + 满分）→ 模块合计行（范围描述 · 得分/满分）→ Progress → 指标明细
+ * 标题条直接复用 V1.1 既有 `.section-label`（不改色/不改字号），只补 flex 排布；
+ * 合计行沿用 V1.1 `.score-row-head` / `.score-row-score` 的字体与栅格；
+ * Progress 沿用 V1.1 `.score-bar-wrap` / `.score-bar-fill`（8px / 99px / 渐变）。
+ * token 全部取自 V1.1：--purple / --light-purple / --line / --card / --muted /
+ * --weak / --input-bg，未引入新色值与新字体。 */
+.section-label.mod-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;
+  margin-bottom:0;border-radius:8px 8px 0 0}
+.mod-title .mod-max{font-weight:800}
+.mod-title .mod-count{margin-left:auto;color:var(--muted);font-size:10px;font-weight:600}
+.mod-block{margin-top:12px;border:.5px solid var(--line);border-radius:10px;
+  background:var(--card);overflow:hidden}
+.mod-block:first-child{margin-top:0}
+.mod-subtotal{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 10px 4px}
+.mod-subtotal .st-label{font-size:12px;font-weight:600;color:var(--text)}
+.mod-subtotal .st-value{flex:0 0 auto;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.mod-bar{padding:0 10px 6px}
+.mod-metrics{border-top:.5px solid var(--line)}
+.mod-partial{padding:8px 10px;color:var(--muted);font-size:10px;line-height:1.55}
+
+/* ---- ⑩ 动态阈值研究 · Research Only（§21 / §35）----
+ * V1.1 已存在 .threshold-panel / .threshold-heading / .threshold-grid /
+ * .historical-toolbar / .index-tabs / .chart-shell / .chart-scroll /
+ * .chart-legend / .status-note，此处**直接复用**，只补「四图栅格」与
+ * 「研究状态表」两个 V1.1 没有对应物件的容器。 */
+.research-note{margin-top:8px;padding:9px 11px;border-left:3px solid var(--purple);
+  border-radius:8px;background:var(--light-purple);color:#5b21b6;font-size:10px;line-height:1.55}
+.dyn-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
+@media(max-width:860px){.dyn-grid{grid-template-columns:minmax(0,1fr)}}
+.dyn-card{border:.5px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+.dyn-card .threshold-panel{margin-top:0;border:0;border-radius:0}
+.table-scroll{overflow-x:auto}
+.status-table{width:100%;min-width:640px;border-collapse:collapse;font-size:10px}
+.status-table th,.status-table td{padding:6px 8px;border-top:.5px solid var(--line);
+  text-align:left;vertical-align:top}
+.status-table th{color:var(--muted);font-weight:700;background:var(--input-bg);white-space:nowrap}
+.status-table td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---- MODEL_V2_FRONTEND_V5 新增（§7 / §9 / §16 / §20 / §27 / §41 / §61）----
+ * 视觉权威仍是 V1.1（DECISION-V2-UI01）。以下三段（综合研判 / 共振 / 阈值验证）
+ * 属「V1.1 无对应组件」，按 §4 优先级 4 重点参考红利 V6 Production 视觉：
+ *   三段卡片结构（Positive / Negative / Conclusion）
+ *   表格式评分区间清单 + 当前行高亮
+ *   阈值表 5 列（阈值 / 完成样本 / 平均收益 / 胜率 / 最大回撤）
+ * 颜色、字号、圆角、间距一律沿用 V1.1 token，不引入新字体与新品牌色。 */
+/* ---- MODEL_V2_FRONTEND_V6 §6 ~ §12 —— 顶部身份行 ----
+ * 左：招商银行 600036.SH（黑字靠左）  右：最新交易日 YYYY-MM-DD（黑字靠右）
+ * 同一横向纯文字行：background=transparent / border=none / box-shadow=none，
+ * 无底色、无色块、无 Pill / Badge、无渐变。右侧字号恒小于左侧字号。
+ * 320/375/390/430 一律保持「左标题 ←→ 右日期」同一行（TOP_IDENTITY_ROW_WRAP=FALSE），
+ * 只通过 responsive font-size / gap / padding 收敛，禁止隐藏或省略日期。 */
+.top-identity{display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;margin:14px 0 10px;padding:0;
+  background:transparent;border:0;box-shadow:none;border-radius:0}
+.top-identity .ti-left{font-size:17px;font-weight:800;color:#000;letter-spacing:.2px;
+  line-height:1.3;white-space:nowrap;min-width:0}
+.top-identity .ti-right{font-size:12px;font-weight:600;color:#000;line-height:1.3;
+  white-space:nowrap;margin-left:auto;text-align:right;min-width:0}
+@media(max-width:430px){
+  .top-identity{gap:7px;margin:12px 0 8px}
+  .top-identity .ti-left{font-size:16px}
+  .top-identity .ti-right{font-size:11.5px}
+}
+@media(max-width:375px){
+  .top-identity{gap:6px}
+  .top-identity .ti-left{font-size:15px;letter-spacing:0}
+  .top-identity .ti-right{font-size:11px;letter-spacing:0}
+}
+@media(max-width:345px){
+  .top-identity{gap:5px}
+  .top-identity .ti-left{font-size:14px}
+  .top-identity .ti-right{font-size:10.5px}
+}
+/* ---- MODEL_V2_FRONTEND_V6 §16 ~ §19 —— Hero 评分信号移动端强制单行 ----
+ * NO_WRAP / NO_ELLIPSIS / NO_CLIPPING：CSS-first 逐级自适应字号，
+ * 再由 JS fitSignals() 做确定性 fit-to-width 兜底（纯展示，不改任何业务值）。 */
+.hero-stats .score-signal{grid-column:1 / -1}
+.hero-stats .score-signal .v{white-space:nowrap;overflow:visible;text-overflow:clip;
+  letter-spacing:0}
+.hero-stats .score-signal .sig-txt{display:inline-block;white-space:nowrap;font-style:normal}
+@media(max-width:1024px){.hero-stats .score-signal .v{font-size:17px}}
+@media(max-width:720px){.hero-stats .score-signal .v{font-size:16px}}
+@media(max-width:560px){.hero-stats .score-signal .v{font-size:15px}
+  .hero-stats .score-signal{padding-left:5px;padding-right:5px}}
+@media(max-width:430px){.hero-stats .score-signal .v{font-size:15px}}
+@media(max-width:390px){.hero-stats .score-signal .v{font-size:13px}
+  .hero-stats .score-signal{padding-left:4px;padding-right:4px}}
+@media(max-width:360px){.hero-stats .score-signal .v{font-size:12px}}
+@media(max-width:340px){.hero-stats .score-signal .v{font-size:11px;letter-spacing:-.1px}}
+.assess-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+@media(max-width:860px){.assess-grid{grid-template-columns:minmax(0,1fr)}}
+.assess-card{border:.5px solid var(--line);border-radius:10px;background:var(--card);
+  padding:10px 12px;overflow:hidden}
+.assess-card h4{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.2px}
+.assess-card.pos h4{color:#059669}
+.assess-card.neg h4{color:#dc2626}
+.assess-card.concl h4{color:var(--purple)}
+.assess-card ul{margin:0;padding-left:16px}
+.assess-card li{font-size:10.5px;line-height:1.7;color:var(--text)}
+.assess-card.concl p{margin:0;font-size:10.5px;line-height:1.75;color:var(--text)}
+/* §26 ~ §30 —— 共振表：四列同时在手机一屏内可见，无横向滚动、无隐藏列。
+ * width:100% + table-layout:fixed + min-width:0，禁止 large min-width。 */
+.resonance-table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;
+  font-size:10px;margin-top:8px}
+.resonance-table th,.resonance-table td{padding:6px 4px;border-top:.5px solid var(--line);
+  text-align:left}
+.resonance-table th{color:var(--muted);font-weight:700;background:var(--input-bg);
+  white-space:nowrap}
+.resonance-table td{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:430px){
+  .resonance-table{font-size:9.5px}
+  .resonance-table th,.resonance-table td{padding:5px 3px}
+}
+@media(max-width:375px){
+  .resonance-table{font-size:9px}
+  .resonance-table th,.resonance-table td{padding:4px 2px;line-height:1.4}
+}
+.resonance-table tr.cur{background:var(--light-purple)}
+.resonance-table tr.cur td{font-weight:700;color:#5b21b6}
+.resonance-joint{margin-top:10px;padding:10px 12px;border-radius:10px;
+  background:var(--light-purple);color:#5b21b6;font-size:11px;font-weight:700;text-align:center}
+/* §10 —— 保留不同措辞的历史风险提示（非被删除的免责声明原文） */
+.hr-note{margin-top:8px;padding:6px 10px;border-radius:8px;background:var(--input-bg);
+  color:var(--muted);font-size:10px;line-height:1.6;text-align:center}
+.range-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin-top:10px}
+.range-field{display:flex;flex-direction:column;gap:3px}
+.range-field label{font-size:10px;color:var(--muted);font-weight:600}
+.range-field input{border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+  font-size:11px;background:var(--input-bg);color:var(--text)}
+.extrema-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+@media(max-width:640px){.extrema-grid{grid-template-columns:minmax(0,1fr)}}
+.extrema-card{border:.5px solid var(--line);border-radius:10px;background:var(--card);padding:9px 11px}
+.extrema-card .ex-label{font-size:10px;color:var(--muted);font-weight:700}
+.extrema-card .ex-value{font:700 14px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:3px}
+.extrema-card .ex-date{font-size:10px;color:var(--muted);margin-top:2px}
+.extrema-card.research{border-style:dashed}
+.thr-table{width:100%;min-width:560px;border-collapse:collapse;font-size:10px;margin-top:8px}
+.thr-table th,.thr-table td{padding:6px 8px;border-top:.5px solid var(--line);text-align:right}
+.thr-table th:first-child,.thr-table td:first-child{text-align:left}
+.thr-table th{color:var(--muted);font-weight:700;background:var(--input-bg);white-space:nowrap}
+.thr-table td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ==========================================================================
+ * PHASE H.2 §15 / §16 / §76 —— MULTI-BANK / MULTI-MODEL SELECTOR
+ * The ONLY stylesheet block added by Phase H.2.  It re-uses the existing
+ * design tokens and the existing .badge pill metrics, and it keeps the pill
+ * width equal to the static badge it replaces (`appearance:none`), so the
+ * restored MODEL_V2_FRONTEND_V6 layout does not move by a single pixel.
+ * No new design system, no new toolbar, no new header.
+ * ========================================================================== */
+/* height:20px + box-sizing:border-box == 被它替换掉的静态 .badge 药丸完全同高，
+   因此 .topbar 不增高 1px、下方所有 section 不产生任何位移（§23）。 */
+.badge-select{appearance:none;-webkit-appearance:none;display:inline-flex;
+  align-items:center;height:20px;padding:0 10px;margin:0;
+  border:.5px solid transparent;border-radius:20px;font:inherit;
+  font-size:10px;font-weight:700;line-height:1;cursor:pointer;max-width:100%}
+.badge-select:hover{border-color:var(--selector-bd);background:var(--light-purple)}
+.badge-select:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.badge-select.mono{background:var(--input-bg);color:var(--muted);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.badge-select.mono:hover{background:var(--light-purple);color:#5b21b6}
+#top-role{background:var(--input-bg);color:var(--muted)}
+/* ≤560px 只放下得下三颗药丸（与黄金页在窄屏的徽标数量一致），因此收起
+   「角色」这颗：让 .topbar .left 保持单行，整页不产生 30px 的下移。
+   桌面端两颗状态药丸（范围 / 角色）都可见，满足 §20 的「选择角色与运行态
+   分开显示」。 */
+@media(max-width:560px){#top-role{display:none}}
