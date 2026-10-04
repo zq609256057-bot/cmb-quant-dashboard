@@ -658,3 +658,11 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
    桌面端两颗状态药丸（范围 / 角色）都可见，满足 §20 的「选择角色与运行态
    分开显示」。 */
 @media(max-width:560px){#top-role{display:none}}
+
+/* ==========================================================================
+ * PHASE H.3 §65 —— CHART-B 图例点击切换（Show / Hide）
+ * 只影响 CHART-B 图例本身：沿用原有 .chart-legend 排版与字号，不新增
+ * Toolbar、不改全局 spacing / typography（§67 / P0-06）。
+ * ========================================================================== */
+#chartB-legend [data-series]{cursor:pointer;user-select:none}
+#chartB-legend [data-series].off{opacity:.45;text-decoration:line-through}

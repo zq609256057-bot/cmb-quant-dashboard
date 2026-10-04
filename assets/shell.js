@@ -18,6 +18,13 @@
   var CORE_HERO_TITLE = "基本面综合值博率";
   var INV_HERO_TITLE  = "吸引力综合值博率";
   var SHW_MAP = {};
+  /* ---- §4 ~ §7 CHART-B 价格叠加（Phase H.3） ----
+   * DATA  = 真实 K 线 OHLC（payload.chart_b_price，本地离线产物）
+   * VISUAL = 主图叠加绘制收盘价曲线，Tooltip 在 OHLC 完整时给出开/高/低/收。
+   * 价格曲线走独立右轴（§7 禁止把价格 normalize 到 0~100 与评分共轴）。
+   * 颜色与投资吸引力评分曲线明确不同（§6），且只改 CHART-B（§67）。 */
+  var PRICE = {};
+  var PRICE_COLOR = "#d97706";   /* 与 #2563eb 评分曲线明显不同（§6） */
 
   /* ================= §36 / §55 —— 全局数字展示契约 =================
    * display_map 由 Python 用 Decimal(ROUND_HALF_UP) 离线算好：
@@ -892,7 +899,9 @@
   }
 
   /* ================= 图表（V1.1 .score-canvas + .chart-crosshair + .chart-tooltip） ================= */
-  function setupChart(shellId){
+  /* padRight：只有存在右轴序列的图表（CHART-B）才为右轴刻度预留右侧留白；
+   * 其余图表 PAD 逐位保持 V6 原值，几何与黄金页一致（§67 / P0-06）。 */
+  function setupChart(shellId, padRight){
     var shell = el(shellId);
     if(!shell) return null;
     var cv = shell.querySelector('canvas.score-canvas');
@@ -901,7 +910,7 @@
     if(!cv || !cross || !tip) return null;
     var ctx = cv.getContext('2d'), cctx = cross.getContext('2d');
     if(!ctx || !cctx) return null;
-    var PAD = {l:44, r:14, t:14, b:26};
+    var PAD = {l:44, r:(padRight ? padRight : 14), t:14, b:26};
     function size(canvas){
       var dpr = window.devicePixelRatio || 1;
       var w = canvas.clientWidth || 600, h = canvas.clientHeight || 240;
@@ -922,14 +931,31 @@
     var W=g.W, H=g.H;
     ctx.clearRect(0,0,g.w,g.h);
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,g.w,g.h);
+    /* §7 真实双轴：左轴 = 评分，右轴 = 价格（RMB）。两条序列各自独立缩放，
+     * 绝不把价格归一化到 0~100 与评分共轴（那会制造虚假视觉相关性）。 */
+    var left=[], right=[];
+    series.forEach(function(se){ (se.axis==='right'?right:left).push(se); });
+    function vals(list){
+      var o=[];
+      list.forEach(function(se){ (se.data||[]).forEach(function(v){ if(v!=null) o.push(v); }); });
+      return o;
+    }
+    var all=vals(left), allR=vals(right);
     var mn = opt && opt.min!=null ? opt.min : 0, mx = opt && opt.max!=null ? opt.max : 100;
-    var all=[]; series.forEach(function(se){ (se.data||[]).forEach(function(v){ if(v!=null) all.push(v); }); });
     if(!(opt && opt.min!=null) && all.length){ mn = Math.min.apply(null, all); }
     if(!(opt && opt.max!=null) && all.length){ mx = Math.max.apply(null, all); }
     if(mx-mn < 1e-9){ mx = mn + 1; }
     var pad2 = (mx-mn)*0.08; mn -= pad2; mx += pad2;
+    var mnR = 0, mxR = 1, hasR = allR.length > 0;
+    if(hasR){
+      mnR = Math.min.apply(null, allR); mxR = Math.max.apply(null, allR);
+      if(mxR-mnR < 1e-9){ mxR = mnR + 1; }
+      var padR = (mxR-mnR)*0.08; mnR -= padR; mxR += padR;
+    }
     var X = function(i){ return p.l + (labels.length<=1?0:(W*i/(labels.length-1))); };
     var Y = function(v){ return p.t + H - (H*(v-mn)/(mx-mn)); };
+    var Y2 = function(v){ return p.t + H - (H*(v-mnR)/(mxR-mnR)); };
+    function Yof(se){ return (se.axis==='right') ? Y2 : Y; }
     // grid（V1.1/V6 网格语义）
     ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1; ctx.font='10px sans-serif'; ctx.fillStyle='#6b7280';
     for(var gi=0; gi<=4; gi++){
@@ -937,6 +963,15 @@
       ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+W,y); ctx.stroke();
       ctx.textAlign='right'; ctx.fillText(vv.toFixed(1), p.l-6, y+3);
     }
+    /* 右轴刻度（价格 RMB）—— 只画在存在右轴序列的图表上，颜色跟随价格曲线。 */
+    if(hasR){
+      ctx.textAlign='left'; ctx.fillStyle=PRICE_COLOR;
+      for(var ri=0; ri<=4; ri++){
+        var rv = mnR + (mxR-mnR)*ri/4, ry = Math.round(Y2(rv))+0.5;
+        ctx.fillText(Number(rv).toFixed(1), p.l+W+6, ry+3);
+      }
+    }
+    ctx.fillStyle='#6b7280';
     ctx.textAlign='center';
     var step = Math.max(1, Math.floor(labels.length/6));
     for(var li=0; li<labels.length; li+=step){ ctx.fillText(labels[li], X(li), g.h-8); }
@@ -948,7 +983,7 @@
       for(var i=0;i<(se.data||[]).length;i++){
         var v = se.data[i];
         if(v==null){ started=false; continue; }
-        var x=X(i), y=Y(v);
+        var x=X(i), y=Yof(se)(v);
         if(!started){ ctx.moveTo(x,y); started=true; } else { ctx.lineTo(x,y); }
       }
       ctx.stroke(); ctx.setLineDash([]);
@@ -960,13 +995,25 @@
       ctx.beginPath(); ctx.moveTo(xm,p.t); ctx.lineTo(xm,p.t+H); ctx.stroke(); ctx.setLineDash([]);
       series.forEach(function(se){
         var v=(se.data||[])[marker]; if(v==null) return;
-        ctx.fillStyle=se.color; ctx.beginPath(); ctx.arc(xm,Y(v),3.2,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle=se.color; ctx.beginPath(); ctx.arc(xm,Yof(se)(v),3.2,0,Math.PI*2); ctx.fill();
       });
     }
     // crosshair canvas 尺寸同步
     var cg = ch.geom(ch.cross);
     ch.cctx.clearRect(0,0,cg.w,cg.h);
-    ch._X = X; ch._Y = Y; ch._mn = mn; ch._mx = mx; ch._labels = labels;
+    ch._X = X; ch._Y = Y; ch._Y2 = hasR ? Y2 : null;
+    ch._mn = mn; ch._mx = mx; ch._labels = labels;
+  }
+  /* §64 —— Tooltip 数值一律走全局数字展示契约（display_map 精确查表），
+   * 浏览器绝不自算业务数字。 */
+  function tipValue(se, i){
+    var v = (se.data||[])[i];
+    if(v==null) return GLYPH;
+    var o = se.ohlc ? se.ohlc[i] : null;
+    if(o && o.open!=null && o.high!=null && o.low!=null && o.close!=null){
+      return '开 '+fmt(o.open,2)+' · 高 '+fmt(o.high,2)+' · 低 '+fmt(o.low,2)+' · 收 '+fmt(o.close,2);
+    }
+    return fmt(v,2);
   }
   /* _series / _labels 缓存在 ch 上：区间切换后同一批监听器读取最新数据，
    * 避免重复 addEventListener。 */
@@ -999,13 +1046,13 @@
       if(ch._X && ch._Y){
         ss.forEach(function(se){
           var v=(se.data||[])[i]; if(v==null) return;
+          var yf = (se.axis==='right' && ch._Y2) ? ch._Y2 : ch._Y;
           ch.cctx.fillStyle=se.color; ch.cctx.beginPath();
-          ch.cctx.arc(ch._X(i), ch._Y(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
+          ch.cctx.arc(ch._X(i), yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
         });
       }
       var rows = ss.map(function(se){
-        var v = (se.data||[])[i];
-        return '<span>'+esc(se.name)+'：'+(v==null?GLYPH:Number(v).toFixed(2))+'</span>';
+        return '<span>'+esc(se.name)+'：'+tipValue(se, i)+'</span>';
       }).join('');
       ch.tip.innerHTML = '<strong>'+esc(ls[i])+'</strong>'+rows;
       ch.tip.style.display = 'block';
@@ -1022,15 +1069,27 @@
   function buildSeries(){
     var showPartial = el('chk-partial') ? el('chk-partial').checked : false;
     var coreFull = [], corePart = [], invFull = [], invPart = [];
+    var pClose = [], pOhlc = [];
+    var ps = (PRICE && PRICE.series) ? PRICE.series : null;
     for(var i=0;i<dates.length;i++){
       var hc=(H.core_class||[])[i]||'NONE', hi=(H.inv_class||[])[i]||'NONE';
       coreFull.push(hc==='FULL' ? (H.core_score||[])[i] : null);
       corePart.push(showPartial && hc==='PARTIAL' ? (H.core_norm||[])[i] : null);
       invFull.push(hi==='FULL' ? (H.inv_score||[])[i] : null);
       invPart.push(showPartial && hi==='PARTIAL' ? (H.inv_norm||[])[i] : null);
+      /* §51 —— 精确交易日对齐；价格缺失显式 null，绝不前向填充。 */
+      var o = ps ? ps[i] : null;
+      if(o && o.close!=null){ pClose.push(o.close); pOhlc.push(o); }
+      else { pClose.push(null); pOhlc.push(null); }
     }
-    return {coreFull:coreFull, corePart:corePart, invFull:invFull, invPart:invPart};
+    return {coreFull:coreFull, corePart:corePart, invFull:invFull, invPart:invPart,
+            priceClose:pClose, priceOhlc:pOhlc};
   }
+  /* §65 —— 图例点击 Show/Hide（不新增任何 Toolbar，保持 Visual Golden）。 */
+  function hiddenSet(){
+    return (CH.B && CH.B._hidden) ? CH.B._hidden : {};
+  }
+  function isShown(se){ return !hiddenSet()[se.key || '']; }
   /* §44 ~ §49 —— CHART-A 三条线：正式 Fixed（实线）/ 扩展研究历史（虚线）/
    * 动态阈值研究 Shadow（虚线，RESEARCH_ONLY）。P03 Hybrid 恒 NOT_DRAWN。 */
   function chartASeries(s){
@@ -1041,11 +1100,20 @@
        data:s.coreShadow, dash:true, width:1.4}
     ];
   }
+  /* §4 ~ §8 —— SERIES A 投资吸引力评分（左轴 0~100，原色不变）
+   *          SERIES B 招商银行 600036 历史价格（右轴 RMB，颜色明显不同）。 */
   function chartBSeries(s){
-    return [
-      {name:'投资吸引力评分', color:'#2563eb', data:s.invFull},
-      {name:'研究扩展（虚线）', color:'#9ca3af', data:s.invPart, dash:true, width:1.2}
+    var out = [
+      {name:'投资吸引力评分', color:'#2563eb', data:s.invFull, key:'score'},
+      {name:'研究扩展（虚线）', color:'#9ca3af', data:s.invPart, dash:true,
+       width:1.2, key:'partial'}
     ];
+    if(PRICE && PRICE.available && (PRICE.series||[]).length){
+      out.push({name:(PRICE.label_zh || '招商银行价格'), color:PRICE_COLOR,
+                data:s.priceClose, ohlc:s.priceOhlc, axis:'right', width:1.4,
+                key:'price'});
+    }
+    return out.filter(isShown);
   }
   function drawAll(d){
     var s = buildSeries();
@@ -1056,10 +1124,14 @@
     function cut(a){ return a.slice(r.s, r.e+1); }
     var sa = {coreFull:cut(s.coreFull), corePart:cut(s.corePart),
               coreShadow:cut(shadowAligned())};
-    var sb = {invFull:cut(s.invFull), invPart:cut(s.invPart)};
+    var sb = {invFull:cut(s.invFull), invPart:cut(s.invPart),
+              priceClose:cut(s.priceClose||[]), priceOhlc:cut(s.priceOhlc||[])};
     var seA = chartASeries(sa), seB = chartBSeries(sb);
     if(!CH.A){
-      CH.A = setupChart('chartA'); CH.B = setupChart('chartB'); CH.C = setupChart('chartC');
+      /* §7 —— 只有 CHART-B 需要右轴留白；CHART-A / CHART-C PAD 保持 V6 原值。 */
+      CH.A = setupChart('chartA');
+      CH.B = setupChart('chartB', (seB.some(function(x){return x.axis==='right';}) ? 52 : 14));
+      CH.C = setupChart('chartC');
       bindCrosshair(CH.A, seA, rdates);
       bindCrosshair(CH.B, seB, rdates);
       var ft = DATA.forward_timeline || {status:'NO_HISTORICAL_FORWARD_EVIDENCE', points:[]};
@@ -1179,6 +1251,22 @@
     }
   });
   if(el('chk-partial')) el('chk-partial').addEventListener('change', function(){ drawAll(cur); });
+  /* §65 —— CHART-B 图例点击切换显示/隐藏（评分 / 价格），不新增 Toolbar。 */
+  (function(){
+    var lg = el('chartB-legend');
+    if(!lg) return;
+    Array.prototype.slice.call(lg.querySelectorAll('[data-series]')).forEach(function(sp){
+      sp.addEventListener('click', function(){
+        if(!CH.B) return;
+        CH.B._hidden = CH.B._hidden || {};
+        var k = sp.getAttribute('data-series');
+        CH.B._hidden[k] = !CH.B._hidden[k];
+        if(CH.B._hidden[k]) sp.className += ' off';
+        else sp.className = String(sp.className).replace(/\s*\boff\b\s*/g,' ').trim();
+        drawAll(cur);
+      });
+    });
+  })();
 
   /* §41 ~ §43 —— 历史区间控件（只改变历史图 X 轴与区间统计，不动评分） */
   if(el('hist-apply')) el('hist-apply').addEventListener('click', applyRange);
@@ -1216,6 +1304,7 @@
     DMAP_PCT = DATA.display_map_pct || {};
     RAW_META = DATA.raw_precision || {};
     SCOPE = DATA.section_scope || {};
+    PRICE = DATA.chart_b_price || {};
     window.__CMB_FMT_MISS__ = {count:0, keys:{}};
     dates = DATA.dates || [];
     days  = DATA.days || {};
