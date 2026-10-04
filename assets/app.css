@@ -666,3 +666,16 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
  * ========================================================================== */
 #chartB-legend [data-series]{cursor:pointer;user-select:none}
 #chartB-legend [data-series].off{opacity:.45;text-decoration:line-through}
+
+/* ==========================================================================
+ * PHASE H.4 §52 —— CHART-B 上下双窗格（上：评分 + 前复权价格 / 下：择时参考）
+ * 选择器全部限定在 #chartB 之内，因此 CHART-A / CHART-C 仍保持 240px 的
+ * 黄金高度，CHART-B 之外位移恒为 0（§66）。不改全局 spacing / typography，
+ * 不引入新设计体系（P0-05）。
+ * ========================================================================== */
+#chartB .score-canvas{height:360px}
+#chartB .chart-crosshair{height:360px}
+@media(max-width:479px){
+  #chartB .score-canvas,#chartB .chart-crosshair{height:300px}
+}
+#chartB-calibre-note{margin-top:8px;line-height:1.6;white-space:normal}

@@ -196,18 +196,21 @@
       <div class="extrema-grid" id="extrema-a"></div>
     </div>
     <div style="margin-top:14px">
-      <!-- §8 / §65 / §72 —— CHART-B 图例：评分（左轴）+ 价格（右轴）。
-           价格口径必须显式披露，禁止让用户猜曲线是什么。 -->
+      <!-- §52 —— CHART-B：上窗格 = 投资吸引力评分（左轴 0~100）+ 招商银行价格·
+           前复权（右轴 RMB，与评分共用 X）；下窗格 = 择时参考（0~20，银行级 ·
+           模型中立 · 不参与任何评分）。价格口径必须显式披露。 -->
       <div class="chart-legend" id="chartB-legend">
-        <span data-series="score"><i style="background:#2563eb"></i>CHART-B 投资吸引力历史（左轴 0~100）</span>
+        <span data-series="score"><i style="background:#2563eb"></i>CHART-B 投资吸引力历史（上窗格 · 左轴 0~100）</span>
         <span data-series="partial"><i class="legend-dash"></i>扩展研究历史</span>
-        <span data-series="price"><i style="background:#d97706"></i>招商银行价格·未复权（右轴 RMB）</span>
+        <span data-series="price"><i style="background:#d97706"></i>招商银行价格·前复权（上窗格 · 右轴 RMB）</span>
+        <span data-series="timing"><i style="background:#059669"></i>择时参考（下窗格 · 0~20）</span>
       </div>
       <div class="chart-scroll"><div class="chart-shell" id="chartB">
         <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
         <div class="chart-tooltip"></div>
       </div></div>
       <div class="extrema-grid" id="extrema-b"></div>
+      <div class="research-note" id="chartB-calibre-note">—</div>
     </div>
     <div style="margin-top:14px">
       <div class="chart-legend"><span><i style="background:#059669"></i>CHART-C Forward Timeline</span></div>

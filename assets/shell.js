@@ -26,6 +26,12 @@
   var PRICE = {};
   var PRICE_COLOR = "#d97706";   /* 与 #2563eb 评分曲线明显不同（§6） */
 
+  /* ---- §52 CHART-B 下窗格：择时参考（Phase H.4） ----
+   * Bank-level、模型中立：V2 / V3 对同一 (bank, date) 数值完全相同（§62）。
+   * 只用第三种不同颜色，沿用既有绿色家族 --green #059669，不引入新设计体系。 */
+  var TIMING = {};
+  var TIMING_COLOR = "#059669";
+
   /* ================= §36 / §55 —— 全局数字展示契约 =================
    * display_map 由 Python 用 Decimal(ROUND_HALF_UP) 离线算好：
    *   ≤2 位小数 → 保留原始有效小数位；>2 位 → 四舍五入到 2 位。
@@ -1046,7 +1052,9 @@
       if(ch._X && ch._Y){
         ss.forEach(function(se){
           var v=(se.data||[])[i]; if(v==null) return;
-          var yf = (se.axis==='right' && ch._Y2) ? ch._Y2 : ch._Y;
+          /* §52 —— 下窗格序列（pane:'lower'）走独立 Y 轴，与上窗格共用 X。 */
+          var yf = (se.pane==='lower' && ch._YL) ? ch._YL
+                 : ((se.axis==='right' && ch._Y2) ? ch._Y2 : ch._Y);
           ch.cctx.fillStyle=se.color; ch.cctx.beginPath();
           ch.cctx.arc(ch._X(i), yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
         });
@@ -1069,8 +1077,9 @@
   function buildSeries(){
     var showPartial = el('chk-partial') ? el('chk-partial').checked : false;
     var coreFull = [], corePart = [], invFull = [], invPart = [];
-    var pClose = [], pOhlc = [];
+    var pClose = [], pOhlc = [], tVal = [];
     var ps = (PRICE && PRICE.series) ? PRICE.series : null;
+    var ts = (TIMING && TIMING.series) ? TIMING.series : null;
     for(var i=0;i<dates.length;i++){
       var hc=(H.core_class||[])[i]||'NONE', hi=(H.inv_class||[])[i]||'NONE';
       coreFull.push(hc==='FULL' ? (H.core_score||[])[i] : null);
@@ -1081,9 +1090,12 @@
       var o = ps ? ps[i] : null;
       if(o && o.close!=null){ pClose.push(o.close); pOhlc.push(o); }
       else { pClose.push(null); pOhlc.push(null); }
+      /* §49 —— 择时参考按精确交易日对齐；窗口不足显式 null，绝不补 10。 */
+      var tv = (ts && ts[i]!=null) ? ts[i] : null;
+      tVal.push(tv);
     }
     return {coreFull:coreFull, corePart:corePart, invFull:invFull, invPart:invPart,
-            priceClose:pClose, priceOhlc:pOhlc};
+            priceClose:pClose, priceOhlc:pOhlc, timing:tVal};
   }
   /* §65 —— 图例点击 Show/Hide（不新增任何 Toolbar，保持 Visual Golden）。 */
   function hiddenSet(){
@@ -1100,20 +1112,138 @@
        data:s.coreShadow, dash:true, width:1.4}
     ];
   }
-  /* §4 ~ §8 —— SERIES A 投资吸引力评分（左轴 0~100，原色不变）
-   *          SERIES B 招商银行 600036 历史价格（右轴 RMB，颜色明显不同）。 */
-  function chartBSeries(s){
+  /* §52 —— CHART-B 上窗格：投资吸引力评分（左轴 0~100，原色不变）
+   *                        + 招商银行价格·前复权（右轴 RMB，颜色明显不同）。 */
+  function chartBUpperSeries(s){
     var out = [
       {name:'投资吸引力评分', color:'#2563eb', data:s.invFull, key:'score'},
       {name:'研究扩展（虚线）', color:'#9ca3af', data:s.invPart, dash:true,
        width:1.2, key:'partial'}
     ];
     if(PRICE && PRICE.available && (PRICE.series||[]).length){
-      out.push({name:(PRICE.label_zh || '招商银行价格'), color:PRICE_COLOR,
+      out.push({name:(PRICE.label_zh || '招商银行价格·前复权'), color:PRICE_COLOR,
                 data:s.priceClose, ohlc:s.priceOhlc, axis:'right', width:1.4,
                 key:'price'});
     }
     return out.filter(isShown);
+  }
+  /* §52 —— CHART-B 下窗格：择时参考 0~20。银行级、模型中立、不参与任何评分，
+   * 只用第三种不同的颜色（沿用既有绿色家族 --green #059669，不引入新设计体系）。 */
+  function chartBLowerSeries(s){
+    var out = [];
+    if(TIMING && TIMING.available){
+      out.push({name:(TIMING.label_zh || '择时参考（0~20）'), color:TIMING_COLOR,
+                data:s.timing, pane:'lower', width:1.5, key:'timing'});
+    }
+    return out.filter(isShown);
+  }
+  /* §52 —— 上下双窗格共用同一 X 轴：上窗格右轴恒为 RMB（绝不把价格归一化到
+   * 0~100），下窗格左轴恒为 0~20。 */
+  function axisRange(list, opt){
+    var o = [];
+    list.forEach(function(se){ (se.data||[]).forEach(function(v){
+      if(v!=null) o.push(v); }); });
+    var mn = (opt && opt.min!=null) ? opt.min : (o.length?Math.min.apply(null,o):0);
+    var mx = (opt && opt.max!=null) ? opt.max : (o.length?Math.max.apply(null,o):1);
+    if(mx-mn<1e-9){ mx = mn + 1; }
+    var pad = (mx-mn)*0.08; mn -= pad; mx += pad;
+    return {mn:mn, mx:mx, has:o.length>0};
+  }
+  function drawSplit(ch, labels, up, lo, marker, optU, optL){
+    if(!ch) return;
+    var g = ch.geom(ch.cv), p = ch.PAD, ctx = ch.ctx, W = g.W, H = g.H;
+    ctx.clearRect(0,0,g.w,g.h);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,g.w,g.h);
+    var GAP = 26;
+    var HU = Math.max(56, (H - GAP) * 0.70);
+    var HL = Math.max(36, H - GAP - HU);
+    var ltop = p.t + HU + GAP;
+    var leftU=[], rightU=[];
+    up.forEach(function(se){ (se.axis==='right'?rightU:leftU).push(se); });
+    var ru = axisRange(leftU, optU), rr = axisRange(rightU, null);
+    var rl = axisRange(lo, optL);
+    var X = function(i){ return p.l + (labels.length<=1?0:(W*i/(labels.length-1))); };
+    var YU = function(v){ return p.t + HU - (HU*(v-ru.mn)/(ru.mx-ru.mn)); };
+    var YR = function(v){ return p.t + HU - (HU*(v-rr.mn)/(rr.mx-rr.mn)); };
+    var YL = function(v){ return ltop + HL - (HL*(v-rl.mn)/(rl.mx-rl.mn)); };
+    function Yof(se, v){
+      if(se.pane==='lower') return YL(v);
+      return (se.axis==='right') ? YR(v) : YU(v);
+    }
+    ctx.font='10px sans-serif'; ctx.lineWidth=1;
+    /* ---- 上窗格网格 + 左轴（评分 0~100） ---- */
+    ctx.strokeStyle='#e5e7eb'; ctx.fillStyle='#6b7280';
+    for(var gi=0; gi<=4; gi++){
+      var vv = ru.mn + (ru.mx-ru.mn)*gi/4, y = Math.round(YU(vv))+0.5;
+      ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+W,y); ctx.stroke();
+      ctx.textAlign='right'; ctx.fillText(vv.toFixed(0), p.l-6, y+3);
+    }
+    /* ---- 上窗格右轴（价格 RMB）—— 颜色跟随价格曲线 ---- */
+    if(rr.has){
+      ctx.textAlign='left'; ctx.fillStyle=PRICE_COLOR;
+      for(var ri=0; ri<=4; ri++){
+        var rv = rr.mn + (rr.mx-rr.mn)*ri/4, ry = Math.round(YR(rv))+0.5;
+        ctx.fillText(Number(rv).toFixed(1), p.l+W+6, ry+3);
+      }
+    }
+    /* ---- 下窗格：区间分隔线（仅标注，非买卖建议）+ 网格 + 左轴 0~20 ---- */
+    ctx.strokeStyle='#f3f4f6';
+    [4,8,12,16].forEach(function(bv){
+      var by = Math.round(YL(bv))+0.5;
+      ctx.beginPath(); ctx.moveTo(p.l,by); ctx.lineTo(p.l+W,by); ctx.stroke();
+    });
+    ctx.strokeStyle='#e5e7eb'; ctx.fillStyle='#6b7280';
+    for(var li2=0; li2<=4; li2++){
+      var lv = rl.mn + (rl.mx-rl.mn)*li2/4, ly = Math.round(YL(lv))+0.5;
+      ctx.beginPath(); ctx.moveTo(p.l,ly); ctx.lineTo(p.l+W,ly); ctx.stroke();
+      ctx.textAlign='right'; ctx.fillText(lv.toFixed(0), p.l-6, ly+3);
+    }
+    ctx.fillStyle=TIMING_COLOR; ctx.textAlign='left';
+    ctx.fillText('择时参考 0~20 · 价格区间位置 · 银行级 · 不参与评分',
+                 p.l+2, ltop-7);
+    /* ---- X 轴（两个窗格共用） ---- */
+    ctx.fillStyle='#6b7280'; ctx.textAlign='center';
+    var step = Math.max(1, Math.floor(labels.length/6));
+    for(var xi=0; xi<labels.length; xi+=step){
+      ctx.fillText(labels[xi], X(xi), g.h-8);
+    }
+    /* ---- 曲线 ---- */
+    function stroke(list){
+      list.forEach(function(se){
+        ctx.strokeStyle = se.color; ctx.lineWidth = se.width || 1.6;
+        if(se.dash) ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+        ctx.beginPath(); var started=false;
+        for(var i=0;i<(se.data||[]).length;i++){
+          var v = se.data[i];
+          if(v==null){ started=false; continue; }
+          var x=X(i), y=Yof(se, v);
+          if(!started){ ctx.moveTo(x,y); started=true; } else { ctx.lineTo(x,y); }
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+      });
+    }
+    stroke(up); stroke(lo);
+    /* ---- 当日标记线（上下窗格各一条） ---- */
+    if(marker!=null && marker>=0 && marker<labels.length){
+      var xm = X(marker);
+      ctx.strokeStyle='rgba(124,58,237,.75)'; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(xm,p.t); ctx.lineTo(xm,p.t+HU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xm,ltop); ctx.lineTo(xm,ltop+HL); ctx.stroke();
+      ctx.setLineDash([]);
+      up.concat(lo).forEach(function(se){
+        var v=(se.data||[])[marker]; if(v==null) return;
+        ctx.fillStyle=se.color; ctx.beginPath();
+        ctx.arc(xm, Yof(se, v), 3.2, 0, Math.PI*2); ctx.fill();
+      });
+    }
+    var cg = ch.geom(ch.cross);
+    ch.cctx.clearRect(0,0,cg.w,cg.h);
+    ch._X = X; ch._Y = YU; ch._Y2 = rr.has ? YR : null; ch._YL = YL;
+    ch._mn = ru.mn; ch._mx = ru.mx; ch._labels = labels;
+    /* §52 —— 下窗格几何按 CSS 像素显式落在 DOM 上：审计与回归都直接读真实值，
+     * 不许测试端"猜"断点高度（各断点画布高度不同，硬编码必然错位）。 */
+    ch.shell.setAttribute('data-split-top', String(Math.round(ltop)));
+    ch.shell.setAttribute('data-split-height', String(Math.round(HL)));
   }
   function drawAll(d){
     var s = buildSeries();
@@ -1125,15 +1255,19 @@
     var sa = {coreFull:cut(s.coreFull), corePart:cut(s.corePart),
               coreShadow:cut(shadowAligned())};
     var sb = {invFull:cut(s.invFull), invPart:cut(s.invPart),
-              priceClose:cut(s.priceClose||[]), priceOhlc:cut(s.priceOhlc||[])};
-    var seA = chartASeries(sa), seB = chartBSeries(sb);
+              priceClose:cut(s.priceClose||[]), priceOhlc:cut(s.priceOhlc||[]),
+              timing:cut(s.timing||[])};
+    var seA = chartASeries(sa), seB = chartBUpperSeries(sb),
+        seT = chartBLowerSeries(sb);
     if(!CH.A){
       /* §7 —— 只有 CHART-B 需要右轴留白；CHART-A / CHART-C PAD 保持 V6 原值。 */
       CH.A = setupChart('chartA');
       CH.B = setupChart('chartB', (seB.some(function(x){return x.axis==='right';}) ? 52 : 14));
       CH.C = setupChart('chartC');
       bindCrosshair(CH.A, seA, rdates);
-      bindCrosshair(CH.B, seB, rdates);
+      /* §52 —— 上下窗格共用同一批十字线序列：一个 tooltip 同时给出
+       * 日期 / 投资吸引力评分 / 择时参考 / 前复权 开·高·低·收。 */
+      bindCrosshair(CH.B, seB.concat(seT), rdates);
       var ft = DATA.forward_timeline || {status:'NO_HISTORICAL_FORWARD_EVIDENCE', points:[]};
       if(ft.status!=='OK' || !ft.points.length){
         el('chartC').innerHTML = '<div class="chart-empty">NO_HISTORICAL_FORWARD_EVIDENCE：'+
@@ -1146,10 +1280,11 @@
       }
     }else{
       setCrosshairSeries(CH.A, seA, rdates);
-      setCrosshairSeries(CH.B, seB, rdates);
+      setCrosshairSeries(CH.B, seB.concat(seT), rdates);
     }
     drawSeries(CH.A, rdates, seA, mi, {min:0,max:100});
-    drawSeries(CH.B, rdates, seB, mi, {min:0,max:100});
+    /* §52 —— CHART-B 上下双窗格：上 0~100（左）/ RMB（右），下 0~20。 */
+    drawSplit(CH.B, rdates, seB, seT, mi, {min:0,max:100}, {min:0,max:20});
     if(CH.C && (DATA.forward_timeline||{}).status==='OK'){
       var ft2 = DATA.forward_timeline;
       drawSeries(CH.C, ft2.points.map(function(p){return p.date;}),
@@ -1165,7 +1300,29 @@
     }
     /* 区间最高 / 最低 与区间统计跟随当前区间刷新 */
     renderExtrema();
+    renderCalibreNote();
     rangeStatus();
+  }
+  /* §53 —— 口径与 PIT 等价性必须如实披露在页面上，禁止让用户猜曲线是什么。
+   * 只写在 CHART-B 卡片内部，不新增 Hero / KPI（§52）。 */
+  function renderCalibreNote(){
+    var cn = el('chartB-calibre-note');
+    if(!cn) return;
+    var parts = [];
+    if(PRICE && PRICE.available){
+      parts.push('价格口径：' + (PRICE.calibre_zh || '前复权')
+        + '（锚点 ' + (PRICE.anchor || GLYPH)
+        + '，按 Q = m·P + a 仿射重建，与 Provider 真实 fc_rights 响应逐字段误差 ≤ 5e-5）；'
+        + '未复权口径保留为后台审计基线，不再是默认可视线。');
+      if(PRICE.non_negative_note_zh) parts.push(PRICE.non_negative_note_zh);
+    }
+    if(TIMING && TIMING.available){
+      parts.push('择时参考：' + (TIMING.formula_zh || '')
+        + '；' + (TIMING.pit_disclosure_zh || ''));
+      parts.push('区间标注：0~4 高位区 · 4~8 偏高 · 8~12 中性 · 12~16 偏低 · 16~20 低位区'
+        + '（仅描述价格处在自身历史区间的什么位置，不构成买卖建议，也不参与任何评分）。');
+    }
+    cn.textContent = parts.join(' ');
   }
 
   /* ================= 事件绑定（每次 boot 对新 DOM 重新绑定） ================= */
@@ -1305,6 +1462,7 @@
     RAW_META = DATA.raw_precision || {};
     SCOPE = DATA.section_scope || {};
     PRICE = DATA.chart_b_price || {};
+    TIMING = DATA.chart_b_entry_timing || {};
     window.__CMB_FMT_MISS__ = {count:0, keys:{}};
     dates = DATA.dates || [];
     days  = DATA.days || {};
