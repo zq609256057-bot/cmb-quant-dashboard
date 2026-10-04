@@ -679,3 +679,18 @@ footer{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:10px;line-h
   #chartB .score-canvas,#chartB .chart-crosshair{height:300px}
 }
 #chartB-calibre-note{margin-top:8px;line-height:1.6;white-space:normal}
+
+/* ==========================================================================
+ * CMB_SCORE_MODEL_V4 ONLY —— 五柱总览卡栅格 + 五柱历史图画布高度
+ * 只新增这两个 V4 专用类；.kpi-grid / .kpi-grid-2 / .kpi-grid-4 以及 V2 / V3
+ * 用到的每一个类都保持原值（视觉母版 MODEL_V2_FRONTEND_V6 不变）。
+ * ========================================================================== */
+.kpi-grid-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:1024px){.kpi-grid-5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.kpi-grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:400px){.kpi-grid-5{grid-template-columns:minmax(0,1fr)}}
+#chartV4 .score-canvas{height:340px}
+#chartV4 .chart-crosshair{height:340px}
+@media(max-width:479px){
+  #chartV4 .score-canvas,#chartV4 .chart-crosshair{height:280px}
+}

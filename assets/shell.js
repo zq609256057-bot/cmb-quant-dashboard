@@ -305,6 +305,179 @@
       return h.join('');
     }).join('');
   }
+  /* ================= CMB_SCORE_MODEL_V4 —— 五柱独立评分渲染 =============
+   * 只在 model_id = CMB_SCORE_MODEL_V4 时启用；V2 / V3 走原来的 hero / 模块 /
+   * 共振 / 阈值路径，一行代码都不改（视觉母版 MODEL_V2_FRONTEND_V6）。
+   * 五柱各自 0~100、同图共享 0~100 纵轴；不存在第六个综合分。
+   * 展示字符串一律查 display_map（Python Decimal ROUND_HALF_UP 预计算），
+   * 浏览器不格式化任何业务数字。 */
+  var ISV4 = false;
+  var V4P = [], V4M = {}, V4RANGE = null;
+  var V4_COLORS = ['#7c3aed', '#2563eb', '#d97706', '#059669', '#dc2626'];
+  /* V2 / V3 专属 section（按 data-section 标识）：V4 下整段隐藏。 */
+  var V23_SECTIONS = ['D_HERO_CORE', 'F_CORE', 'E_FORWARD_OVERLAY',
+                      'D_HERO_INVESTMENT', 'G_INVESTMENT', 'J_COMPREHENSIVE',
+                      'K_RESONANCE', 'H_HISTORY', 'I_DYNAMIC',
+                      'L_THRESHOLD_RETURN'];
+
+  function applyModelSections(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-v4]'),
+      function(n){ n.hidden = !ISV4; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-section]'),
+      function(n){
+        if(V23_SECTIONS.indexOf(n.getAttribute('data-section')) >= 0) n.hidden = ISV4;
+      });
+  }
+
+  function v4RawText(pillar, id, raw){
+    if(raw === null || raw === undefined) return GLYPH;
+    var u = ((V4M[pillar] || {})[id] || {}).unit;
+    return (u === 'pp' || u === 'ratio') ? pct(raw) : fmt(raw, 4);
+  }
+
+  function v4SeriesList(){
+    return V4P.map(function(pm, i){
+      var vals = H[pm.output_field] || [], cls = H[pm.output_field + '_class'] || [];
+      return {name: pm.label_zh, color: V4_COLORS[i % V4_COLORS.length],
+              key: pm.pillar,
+              data: vals.map(function(v, j){ return cls[j] === 'FULL' ? v : null; })};
+    });
+  }
+
+  function renderV4(d){
+    var day = days[d] || null;
+    if(!day && typeof window.__CMB_REQUEST_DAY__ === 'function'){
+      window.__CMB_REQUEST_DAY__(d);
+    }
+    var pl = (day && day.pillars) || {};
+
+    /* ① 五柱总览卡 —— 只替换 V2 hero 的位置，不新增综合分 */
+    el('v4-pillar-grid').innerHTML = V4P.map(function(pm){
+      var b = pl[pm.pillar] || {};
+      var ok = (b.status === 'FULLY_AVAILABLE' && b.score !== null && b.score !== undefined);
+      var tone = ok ? scoreTone(b.score, 100) : 'unavailable';
+      return '<div class="kpi-card" data-pillar="' + esc(pm.pillar) + '">' +
+        '<div class="kpi-label">' + esc(pm.label_zh) + '</div>' +
+        '<span class="kpi-value ' + toneTextCls(tone) + '">' +
+          (ok ? fmt(b.score, 2) : GLYPH) + '</span>' +
+        '<div class="kpi-sub">满分 100 · ' +
+          (ok ? '完整可用' : (STATUS_CN[b.status] || '非完整可用')) + '</div>' +
+        '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+          (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div>' +
+        '</div>';
+    }).join('');
+    el('v4-no-overall').textContent = DATA.no_overall_note_zh || '';
+
+    /* ② 第二主视觉 = 前瞻状态 + Risk Overlay（都不产分数） */
+    var f = (day && day.forward) || {};
+    el('v4-fwd-state').innerHTML =
+      '<span class="chip c-' + esc(f.state || 'INSUFFICIENT_EVIDENCE') + '">' +
+      (ST[f.state] || '证据不足') + '</span>';
+    el('v4-fwd-meta').innerHTML =
+      '<div class="kpi-sub">置信度 ' + esc(f.confidence_display || GLYPH) + '</div>' +
+      '<div class="kpi-rate">' + esc(f.note_zh || '') + '</div>' +
+      (f.reason ? '<div class="mod-partial">' + esc(f.reason) + '</div>' : '');
+    var ro = (day && day.risk_overlay) || {};
+    el('v4-ro-score').textContent = (ro.net_score === null || ro.net_score === undefined)
+      ? GLYPH : fmt(ro.net_score, 2);
+    el('v4-ro-meta').innerHTML =
+      '<div class="kpi-sub">' + esc(STATUS_CN[ro.status] || ro.status || GLYPH) + '</div>' +
+      '<div class="kpi-rate">' + esc(ro.note_zh || '') + '</div>' +
+      ((ro.missing_fields || []).length
+        ? '<div class="mod-partial">缺失字段：' +
+          esc((ro.missing_fields || []).join('、')) + '（缺失不补 0）</div>' : '');
+
+    /* ③ 五柱明细 —— 每一项都可回溯到自己的输入 */
+    el('v4-pillar-blocks').innerHTML = V4P.map(function(pm){
+      var b = pl[pm.pillar] || {}, mm = V4M[pm.pillar] || {};
+      var ok = b.status === 'FULLY_AVAILABLE';
+      var h = [];
+      h.push('<div class="mod-block" data-pillar="' + esc(pm.pillar) + '">');
+      h.push('<div class="section-label mod-title"><span>' + esc(pm.label_zh) + '</span>' +
+        '<span class="mod-max">· 100 分</span>' +
+        '<span class="mod-count">' + esc(pm.finalist || '') + '</span></div>');
+      h.push('<div class="mod-subtotal"><span class="st-label">' +
+        esc(pm.note_zh || '') + '</span>' +
+        '<span class="st-value ' + toneTextCls(ok ? scoreTone(b.score, 100)
+                                                  : 'unavailable') + '">' +
+        (ok ? fmt(b.score, 2) : GLYPH) + ' / 100</span></div>');
+      h.push('<div class="mod-bar"><div class="score-bar-wrap">' +
+        '<i class="score-bar-fill" style="width:' +
+        (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div></div>');
+      if(pm.pillar === 'MACRO' && b.cn10y){
+        h.push('<div class="score-row"><div class="score-row-head">' +
+          '<span class="score-row-label">10 年期国债收益率</span>' +
+          '<span class="score-row-score">' + esc(b.cn10y.raw_pp_display) + '</span></div>' +
+          '<div class="score-row-meta"><span class="raw">as of ' +
+          esc(b.cn10y.asof || GLYPH) + '</span><span>staleness ' +
+          esc(b.cn10y.staleness_td === null ? GLYPH : b.cn10y.staleness_td) +
+          ' 交易日</span></div>' +
+          '<div class="mod-partial">' + esc(b.cn10y.saturation_note_zh || '') +
+          '</div></div>');
+      }
+      var mems = b.members || [];
+      h.push('<div class="mod-metrics">' + (mems.length ? mems.map(function(m){
+        var meta = mm[m.id] || {}, mx = meta.max;
+        var has = (m.score !== null && m.score !== undefined);
+        var tone = has ? toneOf(m.score, mx === null || mx === undefined ? 100 : mx,
+                                m.status) : 'unavailable';
+        return '<div class="score-row">' +
+          '<div class="score-row-head"><span class="score-row-label">' + esc(m.id) +
+          ' · ' + esc(meta.name || m.id) + '</span>' +
+          '<span class="score-row-score ' + toneTextCls(tone) + '">' +
+          (has ? fmt(m.score, 2) : GLYPH) +
+          ((mx === null || mx === undefined) ? '' : ' / ' + fmt(mx, 2)) +
+          '</span></div>' +
+          ((mx === null || mx === undefined) ? '' :
+            '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+            (has ? barWidth(m.score, mx).toFixed(2) : 0) + '%"></i></div>') +
+          '<div class="score-row-meta"><span class="raw">原始值 ' +
+          esc(v4RawText(pm.pillar, m.id, m.raw)) + '</span>' +
+          '<span>' + statusPill(m.status) + '</span></div></div>';
+      }).join('') : '<div class="score-row"><div class="score-row-meta">' +
+          (ok ? '该交易日无逐项明细。'
+              : '该柱非完整可用：缺失不补 0，显示 —。') +
+          '</div></div>') + '</div>');
+      h.push('</div>');
+      return h.join('');
+    }).join('');
+
+    el('v4-day-status').textContent = '可查询交易日 ' + dates.length + ' 个 · 起始 ' +
+      (dates[0] || GLYPH) + ' · 截止 ' + (dates[dates.length - 1] || GLYPH) +
+      ' · 当前 ' + d;
+    el('v4-src-note').textContent = (day && day.source_label) ||
+      '数据来源：CMB_SCORE_MODEL_V4 运行时产物';
+    el('v4-macro-note').textContent = DATA.macro_note_zh || '';
+  }
+
+  /* ④ 五柱历史：同图、共享 0~100 纵轴、缺失断开（绝不前向填充） */
+  function drawV4(d){
+    var rs = V4RANGE || {s: 0, e: dates.length - 1};
+    var rdates = dates.slice(rs.s, rs.e + 1);
+    var se = v4SeriesList().map(function(x){
+      x.data = (x.data || []).slice(rs.s, rs.e + 1);
+      return x;
+    });
+    var mi = dates.indexOf(d);
+    mi = (mi >= rs.s && mi <= rs.e) ? mi - rs.s : -1;
+    if(!CH.V4){
+      CH.V4 = setupChart('chartV4');
+      bindCrosshair(CH.V4, se, rdates);
+    }else{
+      setCrosshairSeries(CH.V4, se, rdates);
+    }
+    drawSeries(CH.V4, rdates, se, mi, {min: 0, max: 100});
+    el('v4-chart-legend').innerHTML = se.map(function(x){
+      return '<span><i style="background:' + x.color + '"></i>' + esc(x.name) + '</span>';
+    }).join('');
+  }
+
+  function v4Preset(n){
+    V4RANGE = (!n || n >= dates.length) ? null
+            : {s: dates.length - n, e: dates.length - 1};
+    if(cur) drawV4(cur);
+  }
+
   /* §38 / §39 —— 历史研究日：不得把 Partial 小计冒充正式满分可比模块 */
   function histModuleNote(title, cls, cov){
     var lv = cls==='FULL' ? 'LEVEL-A 正式可比较历史'
@@ -738,6 +911,8 @@
 
   /* ================= 主渲染 ================= */
   function render(d){
+    /* V4 —— 五柱独立评分走独立渲染路径；V2 / V3 完全不受影响。 */
+    if(ISV4){ renderV4(d); return; }
     var idx = dates.indexOf(d);
     var day = days[d] || null;
     /* §26 —— 逐项明细按年份懒加载；没有就向中性加载器要，绝不自己造数据。 */
@@ -1246,6 +1421,8 @@
     ch.shell.setAttribute('data-split-height', String(Math.round(HL)));
   }
   function drawAll(d){
+    /* V4 —— 一张五柱历史图（共享 0~100），不画 V2/V3 的任何图表。 */
+    if(ISV4){ drawV4(d); return; }
     var s = buildSeries();
     var r = rangeSlice();
     var rdates = dates.slice(r.s, r.e+1);
@@ -1432,6 +1609,10 @@
   if(el('hist-3y')) el('hist-3y').addEventListener('click', function(){ presetRange(3); });
   if(el('hist-5y')) el('hist-5y').addEventListener('click', function(){ presetRange(5); });
   if(el('hist-all')) el('hist-all').addEventListener('click', function(){ presetRange(0); });
+  /* V4 —— 五柱历史图的 1Y / 3Y / ALL 预设（只改 X 轴区间，不动任何分数） */
+  if(el('v4-hist-1y')) el('v4-hist-1y').addEventListener('click', function(){ v4Preset(252); });
+  if(el('v4-hist-3y')) el('v4-hist-3y').addEventListener('click', function(){ v4Preset(756); });
+  if(el('v4-hist-all')) el('v4-hist-all').addEventListener('click', function(){ v4Preset(0); });
   if(el('hist-start')) el('hist-start').addEventListener('change', applyRange);
   if(el('hist-end')) el('hist-end').addEventListener('change', applyRange);
 
@@ -1456,6 +1637,11 @@
   function boot(payload){
     DATA = payload || {};
     MODEL_META = DATA.model_meta || {};
+    /* ---- 三模型分支：V4 = 五柱独立评分，V2 / V3 保持原路径 ---- */
+    ISV4 = MODEL_META.model_id === 'CMB_SCORE_MODEL_V4';
+    V4P = DATA.pillar_meta || [];
+    V4M = DATA.member_meta || {};
+    V4RANGE = null;
     /* §36 —— 展示字符串来自 Python 预计算的查找表，浏览器不自己格式化。 */
     DMAP = DATA.display_map || {};
     DMAP_PCT = DATA.display_map_pct || {};
@@ -1489,13 +1675,15 @@
     buildTree();
     cur = dates.length ? dates[dates.length-1] : null;
 
+    applyModelSections();
     bindEvents();
     /* ---- V6 初始化（全部只读渲染，不触发任何模型重算 / 外部调用） ---- */
     renderTopIdentity();
-    renderThreshold();
+    /* V4 没有阈值收益验证 / 动态阈值研究区块（section_scope 已显式说明），
+       跳过这两个 V2/V3 渲染器，避免它们去查 V4 payload 里不存在的展示键。 */
+    if(!ISV4){ renderThreshold(); renderDynamicShell(); }
     if(el('hist-start') && dates.length) el('hist-start').value = dates[0];
     if(el('hist-end') && dates.length) el('hist-end').value = dates[dates.length-1];
-    renderDynamicShell();
     gotoDate(dates.length ? dates[dates.length-1] : null);
     fitSignals();
     window.__CMB_SHELL_READY__ = true;

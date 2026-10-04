@@ -9,6 +9,9 @@
      单页 shell + 数据驱动换模型：不存在 index_v2.html / index_v3.html 分叉。
      浏览器只做 fetch / select / format / render / chart，绝不重算任何评分。 -->
 <link rel="stylesheet" href="assets/app.css">
+<!-- 站点没有 favicon 文件，显式声明空图标：浏览器不再自动请求 /favicon.ico，
+     那会在控制台留下一条与本页业务无关的 404。 -->
+<link rel="icon" href="data:,">
 </head>
 <body>
 <!-- §23 —— 视觉外壳直接挂在 <body> 下，与黄金页的 body 子节点结构完全一致
@@ -73,6 +76,59 @@
     <div class="ti-left" id="ti-left">—</div>
     <div class="ti-right" id="ti-right">—</div>
   </div>
+
+  <!-- =========================================================================
+       CMB_SCORE_MODEL_V4 ONLY —— 五柱独立评分（V2 / V3 渲染路径完全不变）
+       视觉语言沿用同一套 MODEL_V2_FRONTEND_V6 外壳与 CSS；这组 section 只在
+       model_id = CMB_SCORE_MODEL_V4 时显示，其余模型下 hidden。
+       浏览器依旧只 fetch / select / 查表 / render / chart，绝不重算任何评分。 -->
+  <section class="card" id="v4-overview" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">①</span>五维独立评分 · 五柱各自 0~100</div>
+    <div class="card-subtitle">五柱互不加权、互不折抵、不合成总分；OVERALL_SCORE 永久禁止。</div>
+    <div class="kpi-grid kpi-grid-5" id="v4-pillar-grid"></div>
+    <div class="mod-partial" id="v4-no-overall">—</div>
+    <div class="selector-status" id="v4-day-status">—</div>
+  </section>
+
+  <section class="card" id="v4-second" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">②</span>前瞻状态 · Risk Overlay（独立）</div>
+    <div class="card-subtitle">第二主视觉只映射「前瞻 + 风险」，不产生任何综合分。</div>
+    <div class="kpi-grid kpi-grid-2">
+      <div class="kpi-card" id="v4-fwd-card">
+        <div class="kpi-label">前瞻状态（NO_SCORE）</div>
+        <div id="v4-fwd-state"></div>
+        <div id="v4-fwd-meta"></div>
+      </div>
+      <div class="kpi-card kpi-overlay" id="v4-ro-card">
+        <div class="kpi-label">Risk Overlay（独立 · 0 ~ -20）</div>
+        <span class="kpi-value" id="v4-ro-score">—</span>
+        <div id="v4-ro-meta"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="v4-details" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">③</span>五柱明细 · 逐项可解释</div>
+    <div class="card-subtitle">展示字符串与百分比全部来自 Python 预计算查找表，浏览器不格式化业务数字。</div>
+    <div id="v4-pillar-blocks"></div>
+  </section>
+
+  <section class="card" id="v4-history-card" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">④</span>五柱历史（共享 0~100 轴）</div>
+    <div class="card-subtitle">五柱同图、同一 0~100 纵轴；缺失日显式断开，绝不前向填充。</div>
+    <div class="range-toolbar">
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-1y">1Y</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-3y">3Y</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-all">ALL</button></div>
+    </div>
+    <div class="chart-legend" id="v4-chart-legend"></div>
+    <div class="chart-scroll"><div class="chart-shell" id="chartV4">
+      <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
+      <div class="chart-tooltip"></div>
+    </div></div>
+    <div class="research-note" id="v4-macro-note">—</div>
+    <div class="selector-status" id="v4-src-note">—</div>
+  </section>
 
   <!-- §13 / §14 / §15 —— Hero：展示标题改为「值博率」，且不参与一级编号。
        底层仍分别绑定 CORE_FUNDAMENTAL_SCORE / INVESTMENT_ATTRACTION_SCORE。 -->
