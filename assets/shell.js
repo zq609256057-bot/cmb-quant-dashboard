@@ -187,6 +187,12 @@
       notice('');
     }
     cur = target;
+    /* ISSUE-07 —— 全局交易日切换时，④ 的定位锚点跟着走，保证全页只有一个
+       selectedTradingDate；用户在 ④ 里单独定位则只改 ④ 的锚点。 */
+    if(ISV4){
+      V4_SEL = target;
+      if(el('v4-single-date')) el('v4-single-date').value = target;
+    }
     syncDateControls(target);
     render(target);
     drawAll(target);
@@ -313,7 +319,28 @@
    * 浏览器不格式化任何业务数字。 */
   var ISV4 = false;
   var V4P = [], V4M = {}, V4RANGE = null;
-  var V4_COLORS = ['#7c3aed', '#2563eb', '#d97706', '#059669', '#dc2626'];
+  /* 五柱曲线色板 + 价格曲线沿用本项目既有的价格色（PRICE_COLOR #d97706）。
+     价格色原来与「价格位置」柱撞色，这里把价格位置柱改为 #0891b2，
+     保证同图六条线互不撞色（只改 ④ 内部配色，不动外壳视觉）。 */
+  var V4_COLORS = ['#7c3aed', '#2563eb', '#0891b2', '#059669', '#dc2626'];
+  var V4_QFQ_COLOR = '#d97706';
+  var V4_SM = [];                 /* series_meta（五柱 + QFQ_CLOSE） */
+  var V4_AXIS = {}, V4_EARLIEST = {}, V4_EXPLAIN = {}, V4_THR = {}, V4_JC = {};
+  var V4_QFQ_NOTE = '', V4_MACRO_NOTE = '';
+  /* ISSUE-05 —— 方形复选图例的勾选状态：Fresh Page 恒为「全部未选」。
+     不写 localStorage、不读 localStorage、不存 sessionStorage；
+     刷新页面 / 切换模型后一律回到全未选（D06）。 */
+  var V4_CHK = {};
+  var V4_LG_BUILT = false;   /* 图例 DOM 只在每次 boot 构建一次（避免连点失效） */
+  /* ISSUE-07 —— ④ 的唯一交易日锚点：selectedTradingDate。
+     曲线、图例、十字线、Tooltip 全部围绕它取值，绝不各算一套日期索引。 */
+  var V4_SEL = null;
+  var V4_HOVER = null;
+  /* ⑦ 样本置信度中文标签（J10）—— 只做标签翻译，不做任何数值加工。 */
+  var CONF_CN = {RELATIVELY_SUFFICIENT: '样本相对充足', SUFFICIENT: '样本充足',
+                 CAUTION: '样本偏少 · 谨慎参考', LIMITED: '样本有限',
+                 LOW_SAMPLE: '样本不足', INSUFFICIENT: '样本不足',
+                 NO_MATURE_SAMPLE: '无成熟样本'};
   /* V2 / V3 专属 section（按 data-section 标识）：V4 下整段隐藏。 */
   var V23_SECTIONS = ['D_HERO_CORE', 'F_CORE', 'E_FORWARD_OVERLAY',
                       'D_HERO_INVESTMENT', 'G_INVESTMENT', 'J_COMPREHENSIVE',
@@ -329,19 +356,281 @@
       });
   }
 
+  /* PART F —— 单日定位：回退到不晚于该日的最近交易日（previous-or-equal）。
+     master 交易日轴是唯一真相，绝不按数组下标猜。 */
+  function prevTradingDate(iso){
+    if(!iso || !dates.length) return null;
+    var lo = 0, hi = dates.length - 1, ans = null;
+    while(lo <= hi){
+      var mid = (lo + hi) >> 1;
+      if(dates[mid] <= iso){ ans = dates[mid]; lo = mid + 1; }
+      else { hi = mid - 1; }
+    }
+    return ans;
+  }
+
+  function v4FieldOf(key){
+    if(key === 'QFQ_CLOSE') return 'qfq_close';
+    for(var i = 0; i < V4P.length; i++){
+      if(V4P[i].pillar === key) return V4P[i].output_field;
+    }
+    return null;
+  }
+  function v4ColorOf(key){
+    if(key === 'QFQ_CLOSE') return V4_QFQ_COLOR;
+    for(var i = 0; i < V4P.length; i++){
+      if(V4P[i].pillar === key) return V4_COLORS[i % V4_COLORS.length];
+    }
+    return '#9ca3af';
+  }
+  /* 序列取值一律「日期键取值」：master 轴下标 -> hist_series 同一下标。
+     G02 —— 绝不按数组位置对齐两条不同长度的序列。 */
+  function v4ValueAt(key, date){
+    var i = dates.indexOf(date);
+    if(i < 0) return null;
+    var f = v4FieldOf(key);
+    var arr = (f && H[f]) ? H[f] : [];
+    var v = arr[i];
+    return (v === undefined) ? null : v;
+  }
+
   function v4RawText(pillar, id, raw){
     if(raw === null || raw === undefined) return GLYPH;
-    var u = ((V4M[pillar] || {})[id] || {}).unit;
+    var meta = (V4M[pillar] || {})[id] || {};
+    var u = meta.unit;
     return (u === 'pp' || u === 'ratio') ? pct(raw) : fmt(raw, 4);
+  }
+  function v4RawLabel(pillar, id){
+    return ((V4M[pillar] || {})[id] || {}).raw_label || '原始值';
   }
 
   function v4SeriesList(){
-    return V4P.map(function(pm, i){
-      var vals = H[pm.output_field] || [], cls = H[pm.output_field + '_class'] || [];
-      return {name: pm.label_zh, color: V4_COLORS[i % V4_COLORS.length],
-              key: pm.pillar,
-              data: vals.map(function(v, j){ return cls[j] === 'FULL' ? v : null; })};
+    return V4_SM.map(function(sm){
+      var f = v4FieldOf(sm.key);
+      var vals = (f && H[f]) ? H[f] : [];
+      var right = (sm.axis === 'RIGHT');
+      return {key: sm.key, name: sm.label_zh, color: v4ColorOf(sm.key),
+              axis: right ? 'right' : 'left', money: right, unit: sm.unit,
+              data: vals.slice()};
     });
+  }
+  /* D05 —— 只有勾选的序列才画；Fresh Page 全未选，因此初始不画任何曲线。 */
+  function v4Shown(){
+    return v4SeriesList().filter(function(s){ return V4_CHK[s.key] === true; });
+  }
+
+  /* ISSUE-05 —— 方形复选图例：<input type="checkbox"> 本身就是方形控件，
+     沿用 .chart-legend 的排版与字号，不引入新的设计体系。 */
+  function v4Legend(){
+    var host = el('v4-chart-legend');
+    if(!host) return;
+    if(!V4_LG_BUILT){
+      host.innerHTML = V4_SM.map(function(sm){
+        var axisZh = (sm.axis === 'RIGHT') ? ('右轴 ' + sm.unit) : ('左轴 ' + sm.unit);
+        return '<label class="lg-chk" data-v4k="' + esc(sm.key) + '">' +
+          '<input type="checkbox" data-v4s="' + esc(sm.key) + '">' +
+          '<i style="background:' + v4ColorOf(sm.key) + '"></i>' +
+          '<span class="lg-name">' + esc(sm.label_zh) + '</span>' +
+          '<span class="lg-axis">' + esc(axisZh) + '</span>' +
+          '<span class="lg-val">' + GLYPH + '</span></label>';
+      }).join('');
+      Array.prototype.slice.call(host.querySelectorAll('input[data-v4s]'))
+        .forEach(function(cb){
+          cb.addEventListener('change', function(){
+            V4_CHK[cb.getAttribute('data-v4s')] = cb.checked;
+            if(cur) drawV4(cur);
+          });
+        });
+      V4_LG_BUILT = true;
+    }
+    /* 只更新「当前定位交易日下的取值」与勾选态，绝不重建 DOM：
+       重建会把正在被点击的 input 换掉，导致连点只生效第一个。 */
+    Array.prototype.slice.call(host.querySelectorAll('.lg-chk'))
+      .forEach(function(lb){
+        var key = lb.getAttribute('data-v4k') || '';
+        var on = V4_CHK[key] === true;
+        var cb = lb.querySelector('input[type=checkbox]');
+        if(cb && cb.checked !== on) cb.checked = on;
+        if(on){ lb.classList.add('on'); } else { lb.classList.remove('on'); }
+        var v = v4ValueAt(key, V4_SEL);
+        var sv = lb.querySelector('.lg-val');
+        if(sv){
+          sv.textContent = (v === null || v === undefined) ? GLYPH
+                         : (key === 'QFQ_CLOSE' ? ('¥ ' + fmt(v, 2)) : fmt(v, 2));
+        }
+      });
+  }
+
+  function v4SetNote(msg){
+    var n = el('v4-range-note');
+    if(!n) return;
+    n.hidden = !msg;
+    n.textContent = msg || '';
+  }
+  function v4RangeStatus(){
+    var s = el('v4-range-status');
+    if(!s) return;
+    var rs = V4RANGE || {s: 0, e: dates.length - 1};
+    var parts = ['区间 ' + (dates[rs.s] || GLYPH) + ' ~ ' + (dates[rs.e] || GLYPH) +
+                 ' · ' + (rs.e - rs.s + 1) + ' 个交易日'];
+    V4_SM.forEach(function(sm){
+      var ek = (sm.key === 'QFQ_CLOSE') ? 'QFQ_CLOSE_EARLIEST_DATE'
+                                        : (sm.key + '_EARLIEST_LEGAL_DATE');
+      parts.push(sm.label_zh + ' 起 ' + (V4_EARLIEST[ek] || GLYPH));
+    });
+    s.textContent = parts.join(' · ');
+  }
+  function v4HoverStatus(){
+    var hs = el('v4-hover-status');
+    if(!hs) return;
+    hs.textContent = '定位交易日 ' + (V4_SEL || GLYPH) +
+      (V4_HOVER ? ' · 十字线交易日 ' + V4_HOVER : ' · 十字线未悬停');
+  }
+
+  /* ISSUE-06 —— 单日定位：非交易日显式回退并提示，绝不静默换日。 */
+  function v4Locate(){
+    var v = (el('v4-single-date') || {}).value || '';
+    if(!v){ v4SetNote('请先选择要定位的日期。'); return; }
+    var t = prevTradingDate(v);
+    if(!t){ v4SetNote(v + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    V4_SEL = t;
+    v4SetNote((t === v) ? ('已定位到交易日 ' + t + '。')
+                        : (v + ' 不是交易日，已回退到不晚于该日的最近交易日 ' + t + '。'));
+    if(cur) drawV4(cur);
+  }
+  /* ISSUE-06 —— 区间选择：from / to 各自回退；from > to 显式报错，
+     绝不静默反转（G06：静默反转会把「用户填反了」这件事藏起来）。 */
+  function v4ApplyRange(){
+    var a = (el('v4-hist-start') || {}).value || '';
+    var b = (el('v4-hist-end') || {}).value || '';
+    if(!a || !b){ v4SetNote('请同时填写区间开始与区间结束。'); return; }
+    var ta = prevTradingDate(a), tb = prevTradingDate(b);
+    if(!ta){ v4SetNote(a + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    if(!tb){ v4SetNote(b + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    if(ta > tb){
+      v4SetNote('区间开始（' + ta + '）晚于区间结束（' + tb +
+                '）：已显式报错，不做静默反转，请修正后再应用。');
+      return;
+    }
+    V4RANGE = {s: dates.indexOf(ta), e: dates.indexOf(tb)};
+    var msg = [];
+    if(ta !== a) msg.push(a + ' → ' + ta);
+    if(tb !== b) msg.push(b + ' → ' + tb);
+    msg.push('区间已应用。');
+    v4SetNote(msg.join('；'));
+    if(cur) drawV4(cur);
+  }
+  function v4ResetRange(){
+    V4RANGE = null;
+    v4SetNote('');
+    if(cur) drawV4(cur);
+  }
+
+  /* ---------- ⑥ 综合研判（I01..I10） ---------- */
+  function renderV4Judgment(d){
+    var jd = ((days[d] || {}).judgment) || {};
+    var ul = function(arr){
+      return (arr && arr.length)
+        ? arr.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('')
+        : '<li>' + GLYPH + '</li>';
+    };
+    var pe = el('v4-j-pos'), ne = el('v4-j-neg'), ce = el('v4-j-concl');
+    if(pe) pe.innerHTML = ul(jd.positive);
+    if(ne) ne.innerHTML = ul(jd.negative);
+    if(ce) ce.textContent = jd.conclusion || GLYPH;
+    var bs = el('v4-j-bands');
+    if(bs){
+      var b = jd.bands || {};
+      var zh = {HIGH: '偏高', MID: '中枢附近', LOW: '偏低'};
+      bs.textContent = '展示分档（仅用于阅读，不是模型阈值，不参与评分）：' +
+        V4P.map(function(pm){
+          return pm.label_zh + ' ' + esc(zh[b[pm.pillar]] || b[pm.pillar] || GLYPH);
+        }).join(' · ');
+    }
+    var mm = el('v4-j-meta');
+    if(mm){
+      mm.textContent = '生成方式：本地 Python 确定性规则 · 运行期大模型调用 ' +
+        (jd.llm_runtime_calls === 0 ? '0' : esc(jd.llm_runtime_calls)) + ' 次 · 契约 ' +
+        esc(jd.contract_id || GLYPH) +
+        ' · 不产生第六个分数 · 不含买卖建议 · Macro ≥ 99 使用饱和表述。';
+    }
+  }
+
+  /* ---------- ⑦ 评分阈值收益验证（J01..J14） ----------
+   * 101 行 × 2 张表全部由 Python 预计算落盘，浏览器只做 render，
+   * 一律取 *_display 字符串，绝不自己算收益 / 胜率 / 回撤。 */
+  function renderV4ThrTable(hostId, blk){
+    var host = el(hostId);
+    if(!host) return;
+    var rows = (blk || {}).rows || [];
+    if(!rows.length){
+      host.innerHTML = '<div class="mod-partial">暂无阈值收益验证产物。</div>';
+      return;
+    }
+    host.innerHTML = '<table class="thr-table"><thead><tr>' +
+      '<th>阈值</th><th>信号数</th><th>已完成</th><th>待完成</th>' +
+      '<th>平均收益</th><th>中位收益</th><th>胜率</th><th>最大回撤</th>' +
+      '<th>最近成熟信号日</th><th>样本置信度</th>' +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        var done = Number(r.completed || 0);
+        var d = function(x){ return esc(done > 0 ? (x || GLYPH) : GLYPH); };
+        return '<tr>' +
+          '<td>≥ ' + esc(r.threshold) + '</td>' +
+          '<td class="mono">' + esc(r.signal_count == null ? GLYPH : r.signal_count) + '</td>' +
+          '<td class="mono">' + esc(r.completed == null ? GLYPH : r.completed) + '</td>' +
+          '<td class="mono">' + esc(r.pending == null ? GLYPH : r.pending) + '</td>' +
+          '<td class="mono">' + d(r.mean_return_display) + '</td>' +
+          '<td class="mono">' + d(r.median_return_display) + '</td>' +
+          '<td class="mono">' + d(r.win_rate_display) + '</td>' +
+          '<td class="mono">' + d(r.maximum_drawdown_display) + '</td>' +
+          '<td class="mono">' + esc(r.last_matured_signal_date || GLYPH) + '</td>' +
+          '<td>' + esc(CONF_CN[r.sample_confidence] || r.sample_confidence || GLYPH) +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function renderV4Threshold(){
+    var ct = (V4_THR.PRICE_LOCATION || {}).contract || {};
+    var m = el('v4-thr-method');
+    if(m){
+      m.textContent = '口径：' + esc(ct.signal_rule || GLYPH) + ' · 持有 ' +
+        esc(ct.holding_sessions == null ? GLYPH : ct.holding_sessions) + ' 交易日 · 价格口径 ' +
+        esc(ct.price_basis || GLYPH) + '（' + esc(ct.price_asset || GLYPH) + '） · 收益口径 ' +
+        esc(ct.return_basis || GLYPH) + ' · 最大回撤 ' + esc(ct.drawdown_rule || GLYPH) +
+        ' · 费用 / 税费 / 滑点 ' + esc(ct.fees_taxes_slippage || GLYPH) +
+        ' · 样本重叠 ' + esc(ct.overlapping_policy || GLYPH) +
+        ' · 最优阈值标记：' + (ct.best_threshold_marked === false ? '未标记（TRUE）' : GLYPH) +
+        ' · 不用于模型调参：' + (ct.no_threshold_optimisation ? 'TRUE' : GLYPH);
+    }
+    renderV4ThrTable('v4-thr-pl', V4_THR.PRICE_LOCATION);
+    renderV4ThrTable('v4-thr-mc', V4_THR.MARKET_CONFIRMATION);
+  }
+
+  /* P01 修订块 —— A18 / A19 可解释性：把阈值口径完整摊开。 */
+  function v4P01Block(p){
+    if(!p) return '';
+    var rows = [
+      ['当前净息差', p.current_nim_display],
+      ['阈值口径', p.threshold_method_zh],
+      ['动态 P10 / P80', p.dynamic_p10_display + ' / ' + p.dynamic_p80_display],
+      ['动态窗口', esc(p.window_type) + ' ' + esc(p.window_start) + ' ~ ' + esc(p.window_end) +
+                   '（观测 ' + esc(p.observation_count) + ' 个季度）'],
+      ['自包含策略', esc(p.self_inclusion_policy)],
+      ['阈值版本', esc(p.threshold_version)]
+    ];
+    return '<div class="score-row p01-row">' +
+      '<div class="score-row-head">' +
+        '<span class="score-row-label">P01 净息差 · 阈值口径修订（Pre-Phase5 R1）</span>' +
+        '<span class="score-row-score">' + esc(p.contribution_display) + ' / ' +
+          esc(p.max_display) + '（归一化 ' + esc(p.normalized_display) + '）</span></div>' +
+      '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+        barWidth(p.normalized_pct, 100).toFixed(2) + '%"></i></div>' +
+      '<div class="score-row-meta">' +
+        rows.map(function(r){
+          return '<span>' + esc(r[0]) + '：' + r[1] + '</span>';
+        }).join('') + '</div>' +
+      '<div class="mod-partial">本次修订只改 P01 一项；其余 16 项核心指标与另外四个柱的口径、' +
+        '契约、权重全部不变。候选选择依据结构性判据（Regime 适应性 / 经济单调性 / PIT 完整性 / ' +
+        '分布健康 / 可解释性 / 时序稳定），未使用任何未来收益参与选择。</div></div>';
   }
 
   function renderV4(d){
@@ -382,7 +671,10 @@
       ? GLYPH : fmt(ro.net_score, 2);
     el('v4-ro-meta').innerHTML =
       '<div class="kpi-sub">' + esc(STATUS_CN[ro.status] || ro.status || GLYPH) + '</div>' +
-      '<div class="kpi-rate">' + esc(ro.note_zh || '') + '</div>' +
+      '<div class="kpi-rate">区间 ' + esc(ro.range || '0..-20') + ' · 不并入任何柱' +
+        (ro.applied_to_pillars ? '' : ' · 未作用于柱') + '</div>' +
+      '<div class="kpi-rate">缺失不补 0：' +
+        (ro.zero_fill ? '是（违规）' : '否') + '</div>' +
       ((ro.missing_fields || []).length
         ? '<div class="mod-partial">缺失字段：' +
           esc((ro.missing_fields || []).join('、')) + '（缺失不补 0）</div>' : '');
@@ -404,6 +696,10 @@
       h.push('<div class="mod-bar"><div class="score-bar-wrap">' +
         '<i class="score-bar-fill" style="width:' +
         (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div></div>');
+      /* H01 / H02 —— 价格位置 / 市场确认的可解释性说明 */
+      if(pm.explain_zh){
+        h.push('<div class="research-note">' + esc(pm.explain_zh) + '</div>');
+      }
       if(pm.pillar === 'MACRO' && b.cn10y){
         h.push('<div class="score-row"><div class="score-row-head">' +
           '<span class="score-row-label">10 年期国债收益率</span>' +
@@ -421,6 +717,8 @@
         var has = (m.score !== null && m.score !== undefined);
         var tone = has ? toneOf(m.score, mx === null || mx === undefined ? 100 : mx,
                                 m.status) : 'unavailable';
+        /* C03 —— 有量程就画进度条（0~100 分数与标准化子分都有量程）；
+           C04 —— 原始值只显示数字，绝不给它伪造进度条。 */
         return '<div class="score-row">' +
           '<div class="score-row-head"><span class="score-row-label">' + esc(m.id) +
           ' · ' + esc(meta.name || m.id) + '</span>' +
@@ -431,45 +729,75 @@
           ((mx === null || mx === undefined) ? '' :
             '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
             (has ? barWidth(m.score, mx).toFixed(2) : 0) + '%"></i></div>') +
-          '<div class="score-row-meta"><span class="raw">原始值 ' +
+          '<div class="score-row-meta"><span class="raw">' +
+          esc(v4RawLabel(pm.pillar, m.id)) + ' ' +
           esc(v4RawText(pm.pillar, m.id, m.raw)) + '</span>' +
           '<span>' + statusPill(m.status) + '</span></div></div>';
       }).join('') : '<div class="score-row"><div class="score-row-meta">' +
           (ok ? '该交易日无逐项明细。'
               : '该柱非完整可用：缺失不补 0，显示 —。') +
           '</div></div>') + '</div>');
+      /* A18 —— P01 修订的可解释性块（只出现在基本面质量柱） */
+      if(pm.pillar === 'QUALITY') h.push(v4P01Block(b.p01 || null));
       h.push('</div>');
       return h.join('');
-    }).join('');
+    }).join('') +
+    /* H03 / H04 —— 两柱怎么一起读（含负相关倾向与「低位置 + 高确认」表述） */
+    '<div class="mod-block">' +
+      '<div class="section-label mod-title"><span>价格位置与市场确认：怎么一起读</span></div>' +
+      '<div class="research-note">' + esc(V4_EXPLAIN.relationship_zh || '') + '</div>' +
+      '<div class="research-note">' + esc(V4_EXPLAIN.low_price_high_confirmation_zh || '') +
+      '</div></div>';
 
     el('v4-day-status').textContent = '可查询交易日 ' + dates.length + ' 个 · 起始 ' +
       (dates[0] || GLYPH) + ' · 截止 ' + (dates[dates.length - 1] || GLYPH) +
       ' · 当前 ' + d;
     el('v4-src-note').textContent = (day && day.source_label) ||
-      '数据来源：CMB_SCORE_MODEL_V4 运行时产物';
-    el('v4-macro-note').textContent = DATA.macro_note_zh || '';
+      '数据来源：CMB_SCORE_MODEL_V4 运行时产物（浏览器只渲染，不重算）';
+    el('v4-macro-note').textContent = V4_MACRO_NOTE || DATA.macro_note_zh || '';
+    el('v4-qfq-note').textContent = V4_QFQ_NOTE || '';
+    /* ⑥ —— 综合研判（确定性、0 LLM、无第六分） */
+    renderV4Judgment(d);
   }
 
-  /* ④ 五柱历史：同图、共享 0~100 纵轴、缺失断开（绝不前向填充） */
+  /* ④ 五柱历史：五柱共享左轴 0~100，招商银行前复权收盘价走独立右轴（RMB）。
+     缺失日显式断开，绝不前向填充；几何不随勾选变化（右轴留白恒定）。 */
+  function v4Chart(){
+    if(!CH.V4){
+      CH.V4 = setupChart('chartV4', 46);
+      if(CH.V4){
+        /* ④ 专用：十字线与绘制共用缓存几何（ISSUE-07）。 */
+        CH.V4._cachedGeom = true;
+        CH.V4._onHover = function(dt){
+          V4_HOVER = dt;
+          window.__CMB_V4_HOVER_DATE__ = dt;
+          v4HoverStatus();
+        };
+        bindCrosshair(CH.V4, [], []);
+      }
+    }
+    return CH.V4;
+  }
   function drawV4(d){
+    if(!ISV4) return;
+    var ch = v4Chart();
+    if(!ch) return;
     var rs = V4RANGE || {s: 0, e: dates.length - 1};
+    if(rs.s < 0) rs.s = 0;
+    if(rs.e >= dates.length) rs.e = dates.length - 1;
     var rdates = dates.slice(rs.s, rs.e + 1);
-    var se = v4SeriesList().map(function(x){
+    var se = v4Shown().map(function(x){
       x.data = (x.data || []).slice(rs.s, rs.e + 1);
       return x;
     });
-    var mi = dates.indexOf(d);
+    /* ISSUE-07 —— 定位日只从 master 交易日轴取，与曲线 / 图例 / Tooltip 同源 */
+    var mi = dates.indexOf(V4_SEL);
     mi = (mi >= rs.s && mi <= rs.e) ? mi - rs.s : -1;
-    if(!CH.V4){
-      CH.V4 = setupChart('chartV4');
-      bindCrosshair(CH.V4, se, rdates);
-    }else{
-      setCrosshairSeries(CH.V4, se, rdates);
-    }
-    drawSeries(CH.V4, rdates, se, mi, {min: 0, max: 100});
-    el('v4-chart-legend').innerHTML = se.map(function(x){
-      return '<span><i style="background:' + x.color + '"></i>' + esc(x.name) + '</span>';
-    }).join('');
+    setCrosshairSeries(ch, se, rdates);
+    drawSeries(ch, rdates, se, mi, {min: 0, max: 100});
+    v4Legend();
+    v4RangeStatus();
+    v4HoverStatus();
   }
 
   function v4Preset(n){
@@ -1144,9 +1472,9 @@
       ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+W,y); ctx.stroke();
       ctx.textAlign='right'; ctx.fillText(vv.toFixed(1), p.l-6, y+3);
     }
-    /* 右轴刻度（价格 RMB）—— 只画在存在右轴序列的图表上，颜色跟随价格曲线。 */
+    /* 右轴刻度（价格 RMB）—— 只画在存在右轴序列的图表上，颜色跟随该序列自身。 */
     if(hasR){
-      ctx.textAlign='left'; ctx.fillStyle=PRICE_COLOR;
+      ctx.textAlign='left'; ctx.fillStyle=(right[0] && right[0].color) || PRICE_COLOR;
       for(var ri=0; ri<=4; ri++){
         var rv = mnR + (mxR-mnR)*ri/4, ry = Math.round(Y2(rv))+0.5;
         ctx.fillText(Number(rv).toFixed(1), p.l+W+6, ry+3);
@@ -1184,12 +1512,17 @@
     ch.cctx.clearRect(0,0,cg.w,cg.h);
     ch._X = X; ch._Y = Y; ch._Y2 = hasR ? Y2 : null;
     ch._mn = mn; ch._mx = mx; ch._labels = labels;
+    /* ISSUE-07 —— 十字线反查横坐标必须与绘制用的是同一套几何：
+       绘图区宽高与 PAD 在这里一次性缓存，crosshair 只读缓存，绝不另算一份。 */
+    ch._W = W; ch._H = H; ch._p = p; ch._n = labels.length;
   }
   /* §64 —— Tooltip 数值一律走全局数字展示契约（display_map 精确查表），
    * 浏览器绝不自算业务数字。 */
   function tipValue(se, i){
     var v = (se.data||[])[i];
     if(v==null) return GLYPH;
+    /* 右轴人民币序列：只补币种符号，数值本身仍走 display_map 精确查表。 */
+    if(se.money) return '¥ ' + fmt(v,2);
     var o = se.ohlc ? se.ohlc[i] : null;
     if(o && o.open!=null && o.high!=null && o.low!=null && o.close!=null){
       return '开 '+fmt(o.open,2)+' · 高 '+fmt(o.high,2)+' · 低 '+fmt(o.low,2)+' · 收 '+fmt(o.close,2);
@@ -1210,8 +1543,13 @@
     function idxFrom(e){
       var r = ch.shell.getBoundingClientRect();
       var cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      var p = ch.PAD, W = r.width - p.l - p.r;
-      var n = curLabels().length;
+      var p = ch.PAD, W = r.width - p.l - p.r, n = curLabels().length;
+      /* ISSUE-07 —— 只有 ④（chartV4）改用「与绘制完全相同」的缓存几何反查：
+         不再用 shell 的 rect.width 另算一份，避免 padding 造成的整格偏移。
+         V2 / V3 的 CHART-A / B / C 保持原计算不动（P0-03 / P0-07）。 */
+      if(ch._cachedGeom && typeof ch._W === 'number'){
+        p = ch._p || p; W = ch._W; n = ch._n;
+      }
       var i = Math.round((cx - p.l) / (W / Math.max(1, n-1)));
       return Math.max(0, Math.min(n-1, i));
     }
@@ -1221,8 +1559,13 @@
       var ls = curLabels(), ss = curSeries();
       ch.cctx.clearRect(0,0,g.w,g.h);
       var x = p.l + (W*i/Math.max(1,ls.length-1));
+      var y1 = p.t + g.h - p.b;
+      if(ch._cachedGeom && typeof ch._X === 'function'){
+        /* 竖线与数据点用同一个 X(i)：线落在哪一天，点就落在哪一天。 */
+        p = ch._p || p; x = ch._X(i); y1 = p.t + ch._H;
+      }
       ch.cctx.strokeStyle='rgba(124,58,237,.5)'; ch.cctx.setLineDash([4,4]);
-      ch.cctx.beginPath(); ch.cctx.moveTo(x,p.t); ch.cctx.lineTo(x,p.t+g.h-p.t-p.b+p.t); ch.cctx.stroke();
+      ch.cctx.beginPath(); ch.cctx.moveTo(x,p.t); ch.cctx.lineTo(x,y1); ch.cctx.stroke();
       ch.cctx.setLineDash([]);
       if(ch._X && ch._Y){
         ss.forEach(function(se){
@@ -1231,7 +1574,7 @@
           var yf = (se.pane==='lower' && ch._YL) ? ch._YL
                  : ((se.axis==='right' && ch._Y2) ? ch._Y2 : ch._Y);
           ch.cctx.fillStyle=se.color; ch.cctx.beginPath();
-          ch.cctx.arc(ch._X(i), yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
+          ch.cctx.arc(x, yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
         });
       }
       var rows = ss.map(function(se){
@@ -1239,8 +1582,14 @@
       }).join('');
       ch.tip.innerHTML = '<strong>'+esc(ls[i])+'</strong>'+rows;
       ch.tip.style.display = 'block';
+      /* ISSUE-07 —— 悬停交易日对外只暴露一个：master 轴上的这一格日期。 */
+      if(typeof ch._onHover === 'function') ch._onHover(ls[i], i);
     }
-    function hide(){ ch.cctx && ch.cctx.clearRect(0,0,ch.cross.width,ch.cross.height); ch.tip.style.display='none'; }
+    function hide(){
+      ch.cctx && ch.cctx.clearRect(0,0,ch.cross.width,ch.cross.height);
+      ch.tip.style.display='none';
+      if(typeof ch._onHover === 'function') ch._onHover(null, -1);
+    }
     ch.shell.addEventListener('mousemove', function(e){ show(idxFrom(e)); });
     ch.shell.addEventListener('mouseleave', hide);
     ch.shell.addEventListener('touchstart', function(e){ show(idxFrom(e)); }, {passive:true});
@@ -1613,6 +1962,11 @@
   if(el('v4-hist-1y')) el('v4-hist-1y').addEventListener('click', function(){ v4Preset(252); });
   if(el('v4-hist-3y')) el('v4-hist-3y').addEventListener('click', function(){ v4Preset(756); });
   if(el('v4-hist-all')) el('v4-hist-all').addEventListener('click', function(){ v4Preset(0); });
+  /* ISSUE-06 —— 单日定位（previous-or-equal 回退）与区间选择（不静默反转） */
+  if(el('v4-single-apply')) el('v4-single-apply').addEventListener('click', v4Locate);
+  if(el('v4-single-date')) el('v4-single-date').addEventListener('change', v4Locate);
+  if(el('v4-hist-apply')) el('v4-hist-apply').addEventListener('click', v4ApplyRange);
+  if(el('v4-hist-reset')) el('v4-hist-reset').addEventListener('click', v4ResetRange);
   if(el('hist-start')) el('hist-start').addEventListener('change', applyRange);
   if(el('hist-end')) el('hist-end').addEventListener('change', applyRange);
 
@@ -1642,6 +1996,21 @@
     V4P = DATA.pillar_meta || [];
     V4M = DATA.member_meta || {};
     V4RANGE = null;
+    /* ISSUE-05 —— 勾选状态每次 boot 归零：Fresh Page 恒为全部未选，
+       不读 / 不写 localStorage，切换模型也不继承上一次勾选。 */
+    V4_CHK = {};
+    V4_HOVER = null;
+    V4_LG_BUILT = false;
+    window.__CMB_V4_HOVER_DATE__ = null;
+    /* ④ 的额外元数据（序列清单 / 主轴 / 各序列最早合法日 / 释义 / 阈值表） */
+    V4_SM = DATA.series_meta || [];
+    V4_AXIS = DATA.master_axis || {};
+    V4_EARLIEST = DATA.earliest_legal_date || {};
+    V4_EXPLAIN = DATA.explain || {};
+    V4_THR = DATA.threshold_return || {};
+    V4_JC = DATA.judgment_contract || {};
+    V4_QFQ_NOTE = DATA.qfq_note_zh || '';
+    V4_MACRO_NOTE = DATA.macro_note_zh || '';
     /* §36 —— 展示字符串来自 Python 预计算的查找表，浏览器不自己格式化。 */
     DMAP = DATA.display_map || {};
     DMAP_PCT = DATA.display_map_pct || {};
@@ -1684,9 +2053,20 @@
     if(!ISV4){ renderThreshold(); renderDynamicShell(); }
     if(el('hist-start') && dates.length) el('hist-start').value = dates[0];
     if(el('hist-end') && dates.length) el('hist-end').value = dates[dates.length-1];
+    /* ④ 的单日定位 / 区间控件随模型一起重置到全轴，不继承任何上次的输入。 */
+    if(ISV4 && dates.length){
+      V4_SEL = dates[dates.length-1];
+      if(el('v4-single-date')) el('v4-single-date').value = V4_SEL;
+      if(el('v4-hist-start')) el('v4-hist-start').value = dates[0];
+      if(el('v4-hist-end')) el('v4-hist-end').value = dates[dates.length-1];
+      /* ⑦ —— 101 行 × 2 张表与模型无关地在 boot 时渲染一次。 */
+      renderV4Threshold();
+    }
     gotoDate(dates.length ? dates[dates.length-1] : null);
     fitSignals();
     window.__CMB_SHELL_READY__ = true;
+    /* 只读导出：供本地 / 线上门禁核对 master 交易日轴（不参与任何渲染逻辑）。 */
+    window.__CMB_SHELL_DATES__ = dates.slice();
   }
 
   /* §26 —— 懒加载的逐项明细到达后只重画当天，不重置页面状态。 */

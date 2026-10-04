@@ -114,20 +114,75 @@
   </section>
 
   <section class="card" id="v4-history-card" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">④</span>五柱历史（共享 0~100 轴）</div>
-    <div class="card-subtitle">五柱同图、同一 0~100 纵轴；缺失日显式断开，绝不前向填充。</div>
+    <div class="card-title"><span class="ord">④</span>五柱历史 · 价格走独立右轴</div>
+    <div class="card-subtitle">五柱共享同一条 0~100 左轴；招商银行前复权收盘价走独立右轴（RMB），
+      绝不归一化到 0~100 与评分共轴。缺失日显式断开，绝不前向填充。</div>
+    <!-- ISSUE-06 —— 单日定位：输入任意日期，回退到不晚于该日的最近交易日并显式提示。
+         ISSUE-05 —— 方形复选图例：Fresh Page 全部默认未选，刷新后不记忆勾选。 -->
     <div class="range-toolbar">
+      <div class="range-field"><label for="v4-single-date">单日定位</label>
+        <input type="date" id="v4-single-date" aria-label="单日定位"></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-single-apply">定位</button></div>
       <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-1y">1Y</button></div>
       <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-3y">3Y</button></div>
       <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-all">ALL</button></div>
     </div>
-    <div class="chart-legend" id="v4-chart-legend"></div>
+    <div class="range-toolbar">
+      <div class="range-field"><label for="v4-hist-start">区间开始</label>
+        <input type="date" id="v4-hist-start" aria-label="历史区间开始日期"></div>
+      <div class="range-field"><label for="v4-hist-end">区间结束</label>
+        <input type="date" id="v4-hist-end" aria-label="历史区间结束日期"></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-apply">应用区间</button></div>
+      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-reset">重置区间</button></div>
+    </div>
+    <div class="status-note" id="v4-range-note" hidden></div>
+    <div class="selector-status" id="v4-range-status">—</div>
+    <div class="chart-legend v4-legend" id="v4-chart-legend"></div>
+    <div class="research-note" id="v4-legend-hint">默认全部未选：请勾选需要查看的曲线；刷新页面后回到全部未选，不记忆上次勾选。</div>
     <div class="chart-scroll"><div class="chart-shell" id="chartV4">
       <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
       <div class="chart-tooltip"></div>
     </div></div>
+    <!-- ISSUE-07 —— 十字线 / Tooltip / 图例 / 曲线统一使用同一个 selectedTradingDate -->
+    <div class="selector-status" id="v4-hover-status">—</div>
+    <div class="research-note" id="v4-qfq-note">—</div>
     <div class="research-note" id="v4-macro-note">—</div>
     <div class="selector-status" id="v4-src-note">—</div>
+  </section>
+
+  <!-- ISSUE-09 —— ⑥ 综合研判：本地 Python 确定性生成（0 次大模型调用），
+       沿用 V2 的 Positive / Negative / Conclusion 工程框架但不复制 V2 业务逻辑；
+       不产生第六个分数，不含买卖建议。 -->
+  <section class="card" id="v4-judgment" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">⑥</span>综合研判</div>
+    <div class="card-subtitle">把五个独立维度放在一起读；不合成总分，不给出买卖建议。</div>
+    <div class="assess-grid">
+      <div class="assess-card pos">
+        <h4>Positive · 利多因素</h4><ul id="v4-j-pos"></ul>
+      </div>
+      <div class="assess-card neg">
+        <h4>Negative · 利空因素</h4><ul id="v4-j-neg"></ul>
+      </div>
+      <div class="assess-card concl">
+        <h4>Conclusion · 综合研判</h4><p id="v4-j-concl">—</p>
+      </div>
+    </div>
+    <div class="selector-status" id="v4-j-bands">—</div>
+    <div class="research-note" id="v4-j-meta">—</div>
+  </section>
+
+  <!-- ISSUE-10 —— ⑦ 评分阈值收益验证：阈值 0~100 步长 1（各 101 行），
+       口径继承 V2 标准方法；保留待完成样本单独计数，不标记最优阈值。 -->
+  <section class="card" id="v4-threshold" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">⑦</span>评分阈值收益验证（0 ~ 100 · 步长 1）</div>
+    <div class="card-subtitle">价格位置与市场确认各自 101 档（0…100，步长 1）；只统计已完成样本，
+      待完成样本单独计数，不标记最优阈值，不用于模型调参。</div>
+    <div class="research-note" id="v4-thr-method">—</div>
+    <div class="section-label">价格位置 · 阈值收益（101 档）</div>
+    <div class="table-scroll"><div id="v4-thr-pl"></div></div>
+    <div class="section-label">市场确认 · 阈值收益（101 档）</div>
+    <div class="table-scroll"><div id="v4-thr-mc"></div></div>
+    <div class="hr-note">历史结果不代表未来表现；本表不参与任何模型调参或阈值选择。</div>
   </section>
 
   <!-- §13 / §14 / §15 —— Hero：展示标题改为「值博率」，且不参与一级编号。
