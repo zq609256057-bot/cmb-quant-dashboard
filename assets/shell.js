@@ -320,9 +320,9 @@
   var ISV4 = false;
   var V4P = [], V4M = {}, V4RANGE = null;
   /* 五柱曲线色板 + 价格曲线沿用本项目既有的价格色（PRICE_COLOR #d97706）。
-     价格色原来与「价格位置」柱撞色，这里把价格位置柱改为 #0891b2，
-     保证同图六条线互不撞色（只改 ④ 内部配色，不动外壳视觉）。 */
-  var V4_COLORS = ['#7c3aed', '#2563eb', '#0891b2', '#059669', '#dc2626'];
+     R2 配色决定：价格位置 = 红色 #dc2626，宏观估值环境 = 黑色 #000000，
+     其余三柱保持既有色，六条线仍互不撞色。 */
+  var V4_COLORS = ['#7c3aed', '#2563eb', '#dc2626', '#059669', '#000000'];
   var V4_QFQ_COLOR = '#d97706';
   var V4_SM = [];                 /* series_meta（五柱 + QFQ_CLOSE） */
   var V4_AXIS = {}, V4_EARLIEST = {}, V4_EXPLAIN = {}, V4_THR = {}, V4_JC = {};
@@ -557,25 +557,29 @@
   }
 
   /* ---------- ⑦ 评分阈值收益验证（J01..J14） ----------
-   * 101 行 × 2 张表全部由 Python 预计算落盘，浏览器只做 render，
-   * 一律取 *_display 字符串，绝不自己算收益 / 胜率 / 回撤。 */
+   * R2 —— 11 行 × 2 张表全部由 Python 预计算落盘（阈值 0~100，步长 10），浏览器只做 render，
+   * 一律取 *_display 字符串，绝不自己算收益 / 胜率 / 回撤。
+   * R2 —— 信号方向由数据自带（价格位置 分数 ≥ 阈值；市场确认 分数 ≤ 阈值），
+   * 表头与单元格一律读 signal_operator_display，前端不硬编码比较符。 */
   function renderV4ThrTable(hostId, blk){
     var host = el(hostId);
     if(!host) return;
     var rows = (blk || {}).rows || [];
+    var opd = (rows.length && rows[0].signal_operator_display) ?
+              rows[0].signal_operator_display : '≥';
     if(!rows.length){
       host.innerHTML = '<div class="mod-partial">暂无阈值收益验证产物。</div>';
       return;
     }
     host.innerHTML = '<table class="thr-table"><thead><tr>' +
-      '<th>阈值</th><th>信号数</th><th>已完成</th><th>待完成</th>' +
+      '<th>信号条件</th><th>信号数</th><th>已完成</th><th>待完成</th>' +
       '<th>平均收益</th><th>中位收益</th><th>胜率</th><th>最大回撤</th>' +
       '<th>最近成熟信号日</th><th>样本置信度</th>' +
       '</tr></thead><tbody>' + rows.map(function(r){
         var done = Number(r.completed || 0);
         var d = function(x){ return esc(done > 0 ? (x || GLYPH) : GLYPH); };
         return '<tr>' +
-          '<td>≥ ' + esc(r.threshold) + '</td>' +
+          '<td>分数 ' + esc(r.signal_operator_display || opd) + ' ' + esc(r.threshold) + '</td>' +
           '<td class="mono">' + esc(r.signal_count == null ? GLYPH : r.signal_count) + '</td>' +
           '<td class="mono">' + esc(r.completed == null ? GLYPH : r.completed) + '</td>' +
           '<td class="mono">' + esc(r.pending == null ? GLYPH : r.pending) + '</td>' +
@@ -592,7 +596,13 @@
     var ct = (V4_THR.PRICE_LOCATION || {}).contract || {};
     var m = el('v4-thr-method');
     if(m){
-      m.textContent = '口径：' + esc(ct.signal_rule || GLYPH) + ' · 持有 ' +
+      var tgrid = ct.thresholds || {};
+      m.textContent = '口径：' + esc(ct.signal_rule || GLYPH) +
+        ' · 信号方向 ' + esc(ct.signal_operator || GLYPH) +
+        '（' + esc(ct.signal_operator_meaning || GLYPH) + '）' +
+        ' · 阈值网格 ' + esc(tgrid.min) + '~' + esc(tgrid.max) +
+        ' 步长 ' + esc(tgrid.step) + '（' + esc(tgrid.count) + ' 行）' +
+        ' · 持有 ' +
         esc(ct.holding_sessions == null ? GLYPH : ct.holding_sessions) + ' 交易日 · 价格口径 ' +
         esc(ct.price_basis || GLYPH) + '（' + esc(ct.price_asset || GLYPH) + '） · 收益口径 ' +
         esc(ct.return_basis || GLYPH) + ' · 最大回撤 ' + esc(ct.drawdown_rule || GLYPH) +
@@ -747,6 +757,17 @@
       '<div class="section-label mod-title"><span>价格位置与市场确认：怎么一起读</span></div>' +
       '<div class="research-note">' + esc(V4_EXPLAIN.relationship_zh || '') + '</div>' +
       '<div class="research-note">' + esc(V4_EXPLAIN.low_price_high_confirmation_zh || '') +
+      '</div>' +
+      /* R2 —— 研究性披露：价格位置为何维持原口径、市场确认边界为何后移。
+         文案由 Python 预计算下发，浏览器只渲染。 */
+      (V4_EXPLAIN.price_location_decision_zh ?
+        '<div class="section-label mod-title" style="margin-top:10px">' +
+        '<span>Pre-Phase5 R2 · 价格位置研究结论</span></div>' +
+        '<div class="research-note">' +
+        esc(V4_EXPLAIN.price_location_decision_zh) + '</div>' : '') +
+      (V4_EXPLAIN.market_confirmation_boundary_zh ?
+        '<div class="research-note">' +
+        esc(V4_EXPLAIN.market_confirmation_boundary_zh) + '</div>' : '') +
       '</div></div>';
 
     el('v4-day-status').textContent = '可查询交易日 ' + dates.length + ' 个 · 起始 ' +
