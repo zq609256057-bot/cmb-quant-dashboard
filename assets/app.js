@@ -20,9 +20,26 @@
   "use strict";
 
   var REGISTRY = "assets/data/banks.json";
-  var LOADING = {};                       /* `${bank}/${model}/${year}` in flight */
-  var LOADED = {};                        /* same key, already merged          */
+  var LOADING = {};                       /* cache key in flight               */
+  var LOADED = {};                        /* cache key already merged (K01)    */
+  /* RC V3 / F011 —— 已下载 chunk 的持久内存仓库。
+     旧实现只有 LOADED 标记：切到 V2/V3 后 payload 被整体换掉，再切回 V4 时
+     loadYear 命中旧标记直接 return，不再把 chunk 合并进新的 view，于是五柱
+     详情全部变成「— /100」。
+     现在 chunk 本体按 (bank, model, year, payload_version, view_generation)
+     归属保存；每次 loadYear 命中缓存也一律重新 merge 进当前 view，
+     所以往返切换后详情必定恢复。 */
+  var CHUNKS = {};
   var STATE = {banks: null, bank: null, model: null, payload: null};
+
+  /* K01 —— cache ownership：model + year + payload_version + view_generation。 */
+  function chunkKey(bank, model, year) {
+    var p = STATE.payload || {};
+    var meta = p.model_meta || {};
+    var pv = meta.payload_version || p.payload_version || "-";
+    var vg = meta.view_generation || p.view_generation || "-";
+    return [bank, model, year, pv, vg].join("|");
+  }
 
   function qs(name) {
     var m = new RegExp("[?&]" + name + "=([^&]*)").exec(location.search || "");
@@ -103,32 +120,45 @@
     return "assets/data/" + bank + "/" + model + "/days/" + year + ".json";
   }
 
+  function mergeChunk(chunk) {
+    var days = STATE.payload.days = STATE.payload.days || {};
+    var map = STATE.payload.display_map = STATE.payload.display_map || {};
+    var pmap = STATE.payload.display_map_pct =
+      STATE.payload.display_map_pct || {};
+    var raw = STATE.payload.raw_precision =
+      STATE.payload.raw_precision || {};
+    Object.keys(chunk.days || {}).forEach(function (d) {
+      days[d] = chunk.days[d];
+    });
+    /* §19 / §55 — the year chunk ships its own authoritative display map so
+       the browser still never formats a business number itself. */
+    Object.keys(chunk.display_map || {}).forEach(function (k) {
+      map[k] = chunk.display_map[k];
+    });
+    Object.keys(chunk.display_map_pct || {}).forEach(function (k) {
+      pmap[k] = chunk.display_map_pct[k];
+    });
+    Object.keys(chunk.raw_precision || {}).forEach(function (k) {
+      raw[k] = chunk.raw_precision[k];
+    });
+  }
+
   function loadYear(bank, model, year, then) {
-    var key = bank + "/" + model + "/" + year;
-    if (LOADED[key]) { if (then) then(); return; }
+    var key = chunkKey(bank, model, year);
+    /* K02 —— 命中缓存也必须重新 merge：view 可能已经换过对象。 */
+    if (CHUNKS[key] || LOADED[key]) {
+      if (CHUNKS[key]) {
+        if (STATE.payload) mergeChunk(CHUNKS[key]);
+        LOADED[key] = true;
+      }
+      if (then) then();
+      return;
+    }
     if (LOADING[key]) return;
     LOADING[key] = true;
     getJSON(dayUrl(bank, model, year)).then(function (chunk) {
-      var days = STATE.payload.days = STATE.payload.days || {};
-      var map = STATE.payload.display_map = STATE.payload.display_map || {};
-      var pmap = STATE.payload.display_map_pct =
-        STATE.payload.display_map_pct || {};
-      var raw = STATE.payload.raw_precision =
-        STATE.payload.raw_precision || {};
-      Object.keys(chunk.days || {}).forEach(function (d) {
-        days[d] = chunk.days[d];
-      });
-      /* §19 / §55 — the year chunk ships its own authoritative display map so
-         the browser still never formats a business number itself. */
-      Object.keys(chunk.display_map || {}).forEach(function (k) {
-        map[k] = chunk.display_map[k];
-      });
-      Object.keys(chunk.display_map_pct || {}).forEach(function (k) {
-        pmap[k] = chunk.display_map_pct[k];
-      });
-      Object.keys(chunk.raw_precision || {}).forEach(function (k) {
-        raw[k] = chunk.raw_precision[k];
-      });
+      CHUNKS[key] = chunk;
+      if (STATE.payload) mergeChunk(chunk);
       LOADED[key] = true;
       delete LOADING[key];
       if (then) then();
@@ -143,7 +173,15 @@
   window.__CMB_REQUEST_DAY__ = function (date) {
     if (!STATE.payload || !STATE.payload.days_lazy) return;
     var year = String(date).slice(0, 4);
-    var key = STATE.bank + "/" + STATE.model + "/" + year;
+    var key = chunkKey(STATE.bank, STATE.model, year);
+    /* K02 —— 已持有 chunk 也要重新 merge 后再要求 shell 重渲染。 */
+    if (CHUNKS[key]) {
+      mergeChunk(CHUNKS[key]);
+      if (typeof window.__CMB_SHELL_RERENDER__ === "function") {
+        window.__CMB_SHELL_RERENDER__(date);
+      }
+      return;
+    }
     if (LOADED[key] || LOADING[key]) return;
     loadYear(STATE.bank, STATE.model, year, function () {
       if (typeof window.__CMB_SHELL_RERENDER__ === "function") {

@@ -171,16 +171,17 @@
     <div class="research-note" id="v4-j-meta">—</div>
   </section>
 
-  <!-- ISSUE-10 —— ⑦ 评分阈值收益验证：阈值 0~100 步长 1（各 101 行），
-       口径继承 V2 标准方法；保留待完成样本单独计数，不标记最优阈值。 -->
+  <!-- ISSUE-10 / RC V3 F007 —— ⑦ 评分阈值收益验证：阈值 0~100 **步长 10**（各 11 行），
+       口径继承 V2 标准方法；保留待完成样本单独计数，不标记最优阈值。
+       两张表的信号方向不同，页面必须显式说明，不能让用户把「低确认」读成「强确认」。 -->
   <section class="card" id="v4-threshold" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">⑦</span>评分阈值收益验证（0 ~ 100 · 步长 1）</div>
-    <div class="card-subtitle">价格位置与市场确认各自 101 档（0…100，步长 1）；只统计已完成样本，
+    <div class="card-title"><span class="ord">⑦</span>评分阈值收益验证（0 ~ 100 · 步长 10）</div>
+    <div class="card-subtitle">价格位置与市场确认各自 11 档（0、10、20 … 100，步长 10）；只统计已完成样本，
       待完成样本单独计数，不标记最优阈值，不用于模型调参。</div>
     <div class="research-note" id="v4-thr-method">—</div>
-    <div class="section-label">价格位置 · 阈值收益（101 档）</div>
+    <div class="section-label">价格位置 · 阈值收益（11 档）</div>
     <div class="table-scroll"><div id="v4-thr-pl"></div></div>
-    <div class="section-label">市场确认 · 阈值收益（101 档）</div>
+    <div class="section-label">市场确认 · 阈值收益（11 档）</div>
     <div class="table-scroll"><div id="v4-thr-mc"></div></div>
     <div class="hr-note">历史结果不代表未来表现；本表不参与任何模型调参或阈值选择。</div>
   </section>

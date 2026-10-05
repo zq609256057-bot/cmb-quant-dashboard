@@ -369,6 +369,24 @@
     return ans;
   }
 
+  /* RC V3 / F008 —— 区间起点：next-or-equal。
+     冻结规则（三条，语义各不相同，禁止互相复用）：
+       Single Date : previous-or-equal
+       Range Start : next-or-equal      （Resolved Start 必须 >= From）
+       Range End   : previous-or-equal  （Resolved End   必须 <= To）
+     例：From = 2013-07-13（周六）→ Resolved Start = 2013-07-15（周一），
+     绝不能回退成 2013-07-12。 */
+  function nextTradingDate(iso){
+    if(!iso || !dates.length) return null;
+    var lo = 0, hi = dates.length - 1, ans = null;
+    while(lo <= hi){
+      var mid = (lo + hi) >> 1;
+      if(dates[mid] >= iso){ ans = dates[mid]; hi = mid - 1; }
+      else { lo = mid + 1; }
+    }
+    return ans;
+  }
+
   function v4FieldOf(key){
     if(key === 'QFQ_CLOSE') return 'qfq_close';
     for(var i = 0; i < V4P.length; i++){
@@ -504,12 +522,17 @@
     var a = (el('v4-hist-start') || {}).value || '';
     var b = (el('v4-hist-end') || {}).value || '';
     if(!a || !b){ v4SetNote('请同时填写区间开始与区间结束。'); return; }
-    var ta = prevTradingDate(a), tb = prevTradingDate(b);
-    if(!ta){ v4SetNote(a + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    /* RC V3 / F008 —— 开始 next-or-equal，结束 previous-or-equal。 */
+    var ta = nextTradingDate(a), tb = prevTradingDate(b);
+    if(!ta){ v4SetNote(a + ' 晚于最新交易日 ' + (dates[dates.length-1] || GLYPH) +
+                       '，区间内没有任何交易日。'); return; }
     if(!tb){ v4SetNote(b + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
     if(ta > tb){
-      v4SetNote('区间开始（' + ta + '）晚于区间结束（' + tb +
-                '）：已显式报错，不做静默反转，请修正后再应用。');
+      /* 空区间显式校验：绝不偷偷交换 Start / End（G06）。 */
+      v4SetNote('空区间校验失败：解析后开始（' + ta + '）晚于结束（' + tb +
+                '），该区间内不存在交易日。已显式报错，不做静默反转，请修正后再应用。');
+      V4RANGE = null;
+      if(cur) drawV4(cur);
       return;
     }
     V4RANGE = {s: dates.indexOf(ta), e: dates.indexOf(tb)};
@@ -613,6 +636,28 @@
     }
     renderV4ThrTable('v4-thr-pl', V4_THR.PRICE_LOCATION);
     renderV4ThrTable('v4-thr-mc', V4_THR.MARKET_CONFIRMATION);
+    /* RC V3 / F007 —— 两张表的信号方向相反，必须都写出来：
+       市场确认 Score <= Threshold 表示「低确认 / 尚未确认」状态，
+       绝不是「确认更强」。旧页面只渲染了价格位置的含义。 */
+    var ctm = (V4_THR.MARKET_CONFIRMATION || {}).contract || {};
+    var note = el('v4-thr-mc-note');
+    if(!note){
+      note = document.createElement('div');
+      note.className = 'research-note';
+      note.id = 'v4-thr-mc-note';
+      var host = el('v4-thr-mc');
+      if(host && host.parentNode) host.parentNode.appendChild(note);
+    }
+    if(note){
+      var tgm = ctm.thresholds || {};
+      note.textContent =
+        '信号方向 ' + esc(ctm.signal_operator || GLYPH) +
+        '（' + esc(ctm.signal_operator_meaning || GLYPH) + '）' +
+        ' —— 市场确认分数越低代表越「低确认 / 尚未确认」，' +
+        '因此这里统计的是 Score <= Threshold 的低确认状态下的后续收益，' +
+        '不等于确认强度越高越好。阈值网格 ' + esc(tgm.min) + '~' + esc(tgm.max) +
+        ' 步长 ' + esc(tgm.step) + '（' + esc(tgm.count) + ' 档）。';
+    }
   }
 
   /* P01 修订块 —— A18 / A19 可解释性：把阈值口径完整摊开。 */
@@ -1471,11 +1516,15 @@
       return o;
     }
     var all=vals(left), allR=vals(right);
-    var mn = opt && opt.min!=null ? opt.min : 0, mx = opt && opt.max!=null ? opt.max : 100;
-    if(!(opt && opt.min!=null) && all.length){ mn = Math.min.apply(null, all); }
-    if(!(opt && opt.max!=null) && all.length){ mx = Math.max.apply(null, all); }
+    /* RC V3 / F010 —— 固定域评分轴（min/max 由调用方显式钉死）绝不再加 padding：
+       五柱轴必须严格 0 ~ 100，刻度上不允许出现 -8 或 108。
+       只有自适应轴（未钉死域）才保留 8% 视觉留白。 */
+    var fixedDomain = !!(opt && opt.min != null && opt.max != null);
+    var mn = opt && opt.min != null ? opt.min : 0, mx = opt && opt.max != null ? opt.max : 100;
+    if(!(opt && opt.min != null) && all.length){ mn = Math.min.apply(null, all); }
+    if(!(opt && opt.max != null) && all.length){ mx = Math.max.apply(null, all); }
     if(mx-mn < 1e-9){ mx = mn + 1; }
-    var pad2 = (mx-mn)*0.08; mn -= pad2; mx += pad2;
+    if(!fixedDomain){ var pad2 = (mx-mn)*0.08; mn -= pad2; mx += pad2; }
     var mnR = 0, mxR = 1, hasR = allR.length > 0;
     if(hasR){
       mnR = Math.min.apply(null, allR); mxR = Math.max.apply(null, allR);
@@ -1562,29 +1611,30 @@
     function curLabels(){ return ch._labels || labels; }
     function curSeries(){ return ch._series || series; }
     function idxFrom(e){
-      var r = ch.shell.getBoundingClientRect();
-      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      var p = ch.PAD, W = r.width - p.l - p.r, n = curLabels().length;
-      /* ISSUE-07 —— 只有 ④（chartV4）改用「与绘制完全相同」的缓存几何反查：
-         不再用 shell 的 rect.width 另算一份，避免 padding 造成的整格偏移。
-         V2 / V3 的 CHART-A / B / C 保持原计算不动（P0-03 / P0-07）。 */
-      if(ch._cachedGeom && typeof ch._W === 'number'){
-        p = ch._p || p; W = ch._W; n = ch._n;
-      }
+      /* RC V3 / F009 —— 命中测试与绘图必须是同一套 Canvas 几何。
+         旧代码用 shell 的 bounding rect 作为原点，而曲线用 canvas 的
+         clientWidth 绘制：两者相差 shell 的 border/padding（实测 8.5px），
+         于是 tooltip 与 crosshair 彼此一致（共用同一个已偏移 index），
+         但选中的交易日并不是鼠标下真正画的那一天。
+         现在：原点取 canvas 自己的 rect，绘图区宽度/边距直接复用
+         drawSeries 结束时缓存的 _W / _p / _n，绝不另算一份。 */
+      var rc = ch.cv.getBoundingClientRect();
+      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - rc.left;
+      var p = (ch._p || ch.PAD);
+      var W = (typeof ch._W === 'number') ? ch._W : (rc.width - p.l - p.r);
+      var n = (typeof ch._n === 'number') ? ch._n : curLabels().length;
       var i = Math.round((cx - p.l) / (W / Math.max(1, n-1)));
-      return Math.max(0, Math.min(n-1, i));
+      return Math.max(0, Math.min(Math.max(0, n-1), i));
     }
     function show(i){
-      var r = ch.shell.getBoundingClientRect(), p = ch.PAD, W = r.width-p.l-p.r;
+      /* 竖直参考线一律走绘制缓存下来的 X(i)：线落在哪一天，点就落在哪一天。 */
       var g = ch.geom(ch.cross);
       var ls = curLabels(), ss = curSeries();
       ch.cctx.clearRect(0,0,g.w,g.h);
-      var x = p.l + (W*i/Math.max(1,ls.length-1));
-      var y1 = p.t + g.h - p.b;
-      if(ch._cachedGeom && typeof ch._X === 'function'){
-        /* 竖线与数据点用同一个 X(i)：线落在哪一天，点就落在哪一天。 */
-        p = ch._p || p; x = ch._X(i); y1 = p.t + ch._H;
-      }
+      var p = (ch._p || ch.PAD);
+      var x = (typeof ch._X === 'function') ? ch._X(i)
+            : (p.l + ((g.w - p.l - p.r) * i / Math.max(1, ls.length-1)));
+      var y1 = (typeof ch._H === 'number') ? (p.t + ch._H) : (p.t + g.h - p.b);
       ch.cctx.strokeStyle='rgba(124,58,237,.5)'; ch.cctx.setLineDash([4,4]);
       ch.cctx.beginPath(); ch.cctx.moveTo(x,p.t); ch.cctx.lineTo(x,y1); ch.cctx.stroke();
       ch.cctx.setLineDash([]);
