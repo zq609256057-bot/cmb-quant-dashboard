@@ -12,9 +12,9 @@
    "selection_role": "DEFAULT",
    "operational_status": "RELEASE_CANDIDATE",
    "production_authority": false,
-   "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V2",
+   "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V3",
    "runtime_version": "V4_RUNTIME_V1",
-   "model_fingerprint": "7f1101ac3fb280946b9f4ef7022ff78c1716f5eea79cda5d8b5bb0d4e7cf6087",
+   "model_fingerprint": "8d438b709888d64596e3c46046424bbde51c331c0f3739dd0ffcbca55881b487",
    "public_visible": true,
    "status_badge_zh": "Release Candidate",
    "selection_label_zh": "默认模型",
@@ -28,13 +28,26 @@
     "threshold_return"
    ],
    "overall_score": "FORBIDDEN",
-   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V4",
+   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V5",
    "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_REAUDIT",
-   "payload_version": "RC_V4_V1",
+   "payload_version": "RC_V5_V1",
    "superseded_rc": [
-    "CMB_V4_RELEASE_CANDIDATE_V3"
+    "CMB_V4_RELEASE_CANDIDATE_V3",
+    "CMB_V4_RELEASE_CANDIDATE_V4"
    ],
-   "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE"
+   "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
+   "superseded_rc_status": {
+    "CMB_V4_RELEASE_CANDIDATE_V4": "SUPERSEDED_BY_USER_AUTHORIZED_WEIGHT_AND_FRESHNESS_AMENDMENT"
+   },
+   "old_rc_v4_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V2",
+   "old_rc_v4_fingerprint": "7f1101ac3fb280946b9f4ef7022ff78c1716f5eea79cda5d8b5bb0d4e7cf6087",
+   "v4_production_authority": false,
+   "v4_production_scheduler": "NOT_LOADED",
+   "weight_amendment": {
+    "VALUATION": "DY 30% / PB 55% / PE 15%",
+    "PRICE_LOCATION": "1Y 25% / 3Y 35% / 5Y 40%",
+    "MARKET_CONFIRMATION": "Absolute Trend 60% / RS60 40%"
+   }
   },
   {
    "model_id": "CMB_SCORE_MODEL_V3",

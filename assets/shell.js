@@ -422,6 +422,66 @@
     return ((V4M[pillar] || {})[id] || {}).raw_label || '原始值';
   }
 
+  /* ================= RC V5 / PART F + PART G + PART W =================
+   * Valuation / Price Location / Market Confirmation 的每个组成指标，
+   * 现在与 Quality 的单项指标一样拥有自己的：
+   *   Raw Value + 数据日期 / 标准化分 0~100 / 权重 / 实际得分 / 满分 / 进度条
+   * 进度条复用 Quality 现有的 Visual Golden · Score Color Engine，
+   * 不为这三个区域新建任何配色体系；比例 = score/100 = earned/max（Python 算好）。
+   * 浏览器只渲染，绝不重算业务分（PART G）。
+   * ==================================================================== */
+  function v4ComponentRows(b){
+    var comps = (b && b.components) || [];
+    if(!comps.length) return '';
+    return '<div class="mod-metrics mod-components">' + comps.map(function(c){
+      var ns = c.normalized_score;
+      var has = (ns !== null && ns !== undefined);
+      var tone = has ? toneOf(ns, 100, 'FULLY_AVAILABLE') : 'unavailable';
+      var rawTxt = (c.raw_value_display === undefined || c.raw_value_display === null)
+        ? GLYPH : c.raw_value_display;
+      /* PART H —— 与 Quality 一致：Raw Value 后面永远带数据所属日期 */
+      var rawDate = c.raw_value_date ? (' · ' + c.raw_value_date) : '';
+      return '<div class="score-row score-row-component" data-component="' +
+        esc(c.component_id || '') + '">' +
+        '<div class="score-row-head"><span class="score-row-label">' +
+          esc(c.display_name || c.component_id || '') + '</span>' +
+          '<span class="score-row-score ' + toneTextCls(tone) + '">' +
+          (has ? (c.normalized_score_display || fmt(ns, 2)) : GLYPH) + ' / 100</span></div>' +
+        /* PART G —— 进度条只表示标准化分（等价于 实际得分/满分），
+           绝不由 Raw Value 直接生成。 */
+        '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+          (has ? barWidth(ns, 100).toFixed(2) : 0) + '%"></i></div>' +
+        '<div class="score-row-meta">' +
+          '<span class="raw">原始值 ' + esc(rawTxt) + esc(rawDate) + '</span>' +
+          '<span class="raw">权重 ' + esc(c.weight_display || GLYPH) + '</span>' +
+        '</div>' +
+        '<div class="score-row-meta">' +
+          '<span class="raw">实际得分 ' + esc(c.earned_points_display || GLYPH) +
+            ' / ' + esc(c.max_points_display || GLYPH) + '</span>' +
+          '<span>' + esc(c.freshness_status || '') + '</span>' +
+        '</div>' +
+        (c.explanation ? '<div class="mod-partial">' + esc(c.explanation) + '</div>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* PART H / PART AA —— Quality 每个成员在 Raw Value 后显示数据所属日期 */
+  function v4QualityDateSuffix(b, id){
+    var md = (b && b.member_dates) || {};
+    var m = md[id];
+    if(!m || !m.raw_value_date) return '';
+    return ' · ' + m.raw_value_date;
+  }
+  function v4QualityFreshness(b, id){
+    var md = (b && b.member_dates) || {};
+    var m = md[id] || {};
+    if(!m.freshness_status) return '';
+    if(m.freshness_status === 'CURRENT_LATEST_ELIGIBLE') return '';
+    return '<div class="mod-partial">数据新鲜度：' + esc(m.freshness_status) +
+      (m.available_from ? ' · 可用自 ' + esc(m.available_from) : '') +
+      (m.canonical_source ? ' · 来源 ' + esc(m.canonical_source) : '') + '</div>';
+  }
+
   function v4SeriesList(){
     return V4_SM.map(function(sm){
       var f = v4FieldOf(sm.key);
@@ -786,12 +846,25 @@
             (has ? barWidth(m.score, mx).toFixed(2) : 0) + '%"></i></div>') +
           '<div class="score-row-meta"><span class="raw">' +
           esc(v4RawLabel(pm.pillar, m.id)) + ' ' +
-          esc(v4RawText(pm.pillar, m.id, m.raw)) + '</span>' +
-          '<span>' + statusPill(m.status) + '</span></div></div>';
+          esc(v4RawText(pm.pillar, m.id, m.raw)) +
+          /* PART H —— Quality 的 Raw Value 后面必须带数据所属日期 */
+          esc(pm.pillar === 'QUALITY' ? v4QualityDateSuffix(b, m.id) : '') + '</span>' +
+          '<span>' + statusPill(m.status) + '</span></div></div>' +
+          (pm.pillar === 'QUALITY' ? v4QualityFreshness(b, m.id) : '');
       }).join('') : '<div class="score-row"><div class="score-row-meta">' +
           (ok ? '该交易日无逐项明细。'
               : '该柱非完整可用：缺失不补 0，显示 —。') +
           '</div></div>') + '</div>');
+      /* RC V5 / PART F —— 三柱的组成指标明细（与 Quality 同一套组件化结构） */
+      if(pm.pillar === 'VALUATION' || pm.pillar === 'PRICE_LOCATION' ||
+         pm.pillar === 'MARKET_CONFIRMATION'){
+        h.push(v4ComponentRows(b));
+        if(b.weight_policy_id){
+          h.push('<div class="research-note">内部权重政策：' +
+            esc(b.weight_policy_id) + '（权重由用户授权冻结，'
+            + '未用未来收益 / IC / 阈值收益 / MDD 反向优化）</div>');
+        }
+      }
       /* A18 —— P01 修订的可解释性块（只出现在基本面质量柱） */
       if(pm.pillar === 'QUALITY') h.push(v4P01Block(b.p01 || null));
       h.push('</div>');
