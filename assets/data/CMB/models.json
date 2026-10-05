@@ -28,16 +28,18 @@
     "threshold_return"
    ],
    "overall_score": "FORBIDDEN",
-   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V5",
+   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V6",
    "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_REAUDIT",
-   "payload_version": "RC_V5_V1",
+   "payload_version": "RC_V6_V1",
    "superseded_rc": [
     "CMB_V4_RELEASE_CANDIDATE_V3",
-    "CMB_V4_RELEASE_CANDIDATE_V4"
+    "CMB_V4_RELEASE_CANDIDATE_V4",
+    "CMB_V4_RELEASE_CANDIDATE_V5"
    ],
    "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
    "superseded_rc_status": {
-    "CMB_V4_RELEASE_CANDIDATE_V4": "SUPERSEDED_BY_USER_AUTHORIZED_WEIGHT_AND_FRESHNESS_AMENDMENT"
+    "CMB_V4_RELEASE_CANDIDATE_V4": "SUPERSEDED_BY_USER_AUTHORIZED_WEIGHT_AND_FRESHNESS_AMENDMENT",
+    "CMB_V4_RELEASE_CANDIDATE_V5": "SUPERSEDED_BY_FRONTEND_PRESENTATION_TRUTH_AND_EVIDENCE_CLOSURE"
    },
    "old_rc_v4_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V2",
    "old_rc_v4_fingerprint": "7f1101ac3fb280946b9f4ef7022ff78c1716f5eea79cda5d8b5bb0d4e7cf6087",
@@ -47,6 +49,27 @@
     "VALUATION": "DY 30% / PB 55% / PE 15%",
     "PRICE_LOCATION": "1Y 25% / 3Y 35% / 5Y 40%",
     "MARKET_CONFIRMATION": "Absolute Trend 60% / RS60 40%"
+   },
+   "old_rc_v5_rc_id": "CMB_V4_RELEASE_CANDIDATE_V5",
+   "old_rc_v5_payload_version": "RC_V5_V1",
+   "rc_v6_scope": {
+    "RC_VERSION_CHANGED": true,
+    "MODEL_VERSION_SEMANTICS_CHANGED": false,
+    "CONTRACT_CHANGED": false,
+    "FINGERPRINT_CHANGED": false,
+    "scope_zh": "仅前端展示真相 / 证据真相 / 回滚完整性 / 当前权威收口；未改任何模型语义、权重、公式、阈值、锚点、PIT 规则或业务评分结果。"
+   },
+   "presentation_truth": {
+    "legacy_user_visible_duplicate_count": 0,
+    "valuation_visible_component_rows": 3,
+    "price_location_visible_component_rows": 3,
+    "market_confirmation_visible_component_rows": 2,
+    "display_policy": {
+     "VALUATION": "CMB_V4_VALUATION_WEIGHT_POLICY_V1",
+     "PRICE_LOCATION": "CMB_V4_PRICE_LOCATION_WEIGHT_POLICY_V1",
+     "MARKET_CONFIRMATION": "CMB_V4_MARKET_CONFIRMATION_WEIGHT_POLICY_V1"
+    },
+    "browser_business_recalc_count": 0
    }
   },
   {

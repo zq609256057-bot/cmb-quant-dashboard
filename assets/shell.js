@@ -802,9 +802,16 @@
       h.push('<div class="mod-block" data-pillar="' + esc(pm.pillar) + '">');
       h.push('<div class="section-label mod-title"><span>' + esc(pm.label_zh) + '</span>' +
         '<span class="mod-max">· 100 分</span>' +
-        '<span class="mod-count">' + esc(pm.finalist || '') + '</span></div>');
+        /* PART B / PART C / D / E —— 用户可见的是「展示政策标识」。
+           旧的 finalist 标识（VA0_PURE_EQUAL_3_FACTOR / PL1_..._EQUAL /
+           MC1_DECOUPLED_ARITHMETIC）出现在指纹绑定的 CONTRACT V3 里，属
+           Fingerprint-bound Contract Identifier：内部兼容保留，但不再下发、
+           也不再渲染，避免用户看到与真实冻结权重矛盾的旧口径。 */
+        '<span class="mod-count">' +
+        esc(pm.display_policy_label || pm.display_policy_id || pm.finalist || '') +
+        '</span></div>');
       h.push('<div class="mod-subtotal"><span class="st-label">' +
-        esc(pm.note_zh || '') + '</span>' +
+        esc(pm.formula_zh || pm.note_zh || '') + '</span>' + '</span>' +
         '<span class="st-value ' + toneTextCls(ok ? scoreTone(b.score, 100)
                                                   : 'unavailable') + '">' +
         (ok ? fmt(b.score, 2) : GLYPH) + ' / 100</span></div>');
@@ -827,7 +834,10 @@
           '</div></div>');
       }
       var mems = b.members || [];
-      h.push('<div class="mod-metrics">' + (mems.length ? mems.map(function(m){
+      /* PART C / D / E —— 三柱的旧 member 行已从 payload 移除；只有当真正
+         还有 member 时才画明细区，避免留下「该交易日无逐项明细」的空壳行。 */
+      if(mems.length){
+      h.push('<div class="mod-metrics">' + mems.map(function(m){
         var meta = mm[m.id] || {}, mx = meta.max;
         var has = (m.score !== null && m.score !== undefined);
         var tone = has ? toneOf(m.score, mx === null || mx === undefined ? 100 : mx,
@@ -851,10 +861,8 @@
           esc(pm.pillar === 'QUALITY' ? v4QualityDateSuffix(b, m.id) : '') + '</span>' +
           '<span>' + statusPill(m.status) + '</span></div></div>' +
           (pm.pillar === 'QUALITY' ? v4QualityFreshness(b, m.id) : '');
-      }).join('') : '<div class="score-row"><div class="score-row-meta">' +
-          (ok ? '该交易日无逐项明细。'
-              : '该柱非完整可用：缺失不补 0，显示 —。') +
-          '</div></div>') + '</div>');
+      }).join('') + '</div>');
+      }
       /* RC V5 / PART F —— 三柱的组成指标明细（与 Quality 同一套组件化结构） */
       if(pm.pillar === 'VALUATION' || pm.pillar === 'PRICE_LOCATION' ||
          pm.pillar === 'MARKET_CONFIRMATION'){
