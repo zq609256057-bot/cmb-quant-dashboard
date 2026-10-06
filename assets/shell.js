@@ -325,8 +325,7 @@
   var V4_COLORS = ['#7c3aed', '#2563eb', '#dc2626', '#059669', '#000000'];
   var V4_QFQ_COLOR = '#d97706';
   var V4_SM = [];                 /* series_meta（五柱 + QFQ_CLOSE） */
-  var V4_AXIS = {}, V4_EARLIEST = {}, V4_EXPLAIN = {}, V4_THR = {}, V4_JC = {};
-  var V4_QFQ_NOTE = '', V4_MACRO_NOTE = '';
+  var V4_AXIS = {}, V4_EARLIEST = {}, V4_BAND = {};
   /* ISSUE-05 —— 方形复选图例的勾选状态：Fresh Page 恒为「全部未选」。
      不写 localStorage、不读 localStorage、不存 sessionStorage；
      刷新页面 / 切换模型后一律回到全未选（D06）。 */
@@ -472,15 +471,8 @@
     if(!m || !m.raw_value_date) return '';
     return ' · ' + m.raw_value_date;
   }
-  function v4QualityFreshness(b, id){
-    var md = (b && b.member_dates) || {};
-    var m = md[id] || {};
-    if(!m.freshness_status) return '';
-    if(m.freshness_status === 'CURRENT_LATEST_ELIGIBLE') return '';
-    return '<div class="mod-partial">数据新鲜度：' + esc(m.freshness_status) +
-      (m.available_from ? ' · 可用自 ' + esc(m.available_from) : '') +
-      (m.canonical_source ? ' · 来源 ' + esc(m.canonical_source) : '') + '</div>';
-  }
+  /* PART H —— 内部新鲜度枚举与 canonical_source 属工程说明，不再渲染；
+     Quality 成员的 Raw Value 日期（v4QualityDateSuffix）继续保留。 */
 
   function v4SeriesList(){
     return V4_SM.map(function(sm){
@@ -621,132 +613,53 @@
     if(pe) pe.innerHTML = ul(jd.positive);
     if(ne) ne.innerHTML = ul(jd.negative);
     if(ce) ce.textContent = jd.conclusion || GLYPH;
-    var bs = el('v4-j-bands');
-    if(bs){
-      var b = jd.bands || {};
-      var zh = {HIGH: '偏高', MID: '中枢附近', LOW: '偏低'};
-      bs.textContent = '展示分档（仅用于阅读，不是模型阈值，不参与评分）：' +
-        V4P.map(function(pm){
-          return pm.label_zh + ' ' + esc(zh[b[pm.pillar]] || b[pm.pillar] || GLYPH);
-        }).join(' · ');
-    }
-    var mm = el('v4-j-meta');
-    if(mm){
-      mm.textContent = '生成方式：本地 Python 确定性规则 · 运行期大模型调用 ' +
-        (jd.llm_runtime_calls === 0 ? '0' : esc(jd.llm_runtime_calls)) + ' 次 · 契约 ' +
-        esc(jd.contract_id || GLYPH) +
-        ' · 不产生第六个分数 · 不含买卖建议 · Macro ≥ 99 使用饱和表述。';
-    }
+    /* G11 —— 「生成方式 / 运行期大模型调用 / 契约 ID / 不含买卖建议」等
+       工程与治理说明不再作为 Current User-visible 文案输出。
+       内部事实（LLM_RUNTIME_CALLS = 0 / OVERALL_SCORE = FORBIDDEN /
+       BUY_SELL_ADVICE = 0）仍然成立，只是不再向 Public User 展示。 */
   }
 
-  /* ---------- ⑦ 评分阈值收益验证（J01..J14） ----------
-   * R2 —— 11 行 × 2 张表全部由 Python 预计算落盘（阈值 0~100，步长 10），浏览器只做 render，
-   * 一律取 *_display 字符串，绝不自己算收益 / 胜率 / 回撤。
-   * R2 —— 信号方向由数据自带（价格位置 分数 ≥ 阈值；市场确认 分数 ≤ 阈值），
-   * 表头与单元格一律读 signal_operator_display，前端不硬编码比较符。 */
-  function renderV4ThrTable(hostId, blk){
+  /* ---------- ⑦ 评分区间收益验证（PART A ~ PART K） ----------
+   * 互斥 Score Band：两个维度完全同一套 10 个区间
+   *   0-10 / 11-20 / ... / 91-100（[0,10] (10,20] ... (90,100]，完整精度）
+   * 全部由 Python（rc7_band.py + rc7_payload.py）预计算落盘，
+   * 浏览器只做 render，一律取 *_display 字符串，
+   * 绝不自己分组、算收益 / 中位 / 胜率 / 回撤（BROWSER_BUSINESS_RECALC = 0）。 */
+  function renderV4BandTable(hostId, blk){
     var host = el(hostId);
     if(!host) return;
     var rows = (blk || {}).rows || [];
-    var opd = (rows.length && rows[0].signal_operator_display) ?
-              rows[0].signal_operator_display : '≥';
     if(!rows.length){
-      host.innerHTML = '<div class="mod-partial">暂无阈值收益验证产物。</div>';
+      host.innerHTML = '<div class="mod-partial">暂无评分区间收益验证产物。</div>';
       return;
     }
     host.innerHTML = '<table class="thr-table"><thead><tr>' +
-      '<th>信号条件</th><th>信号数</th><th>已完成</th><th>待完成</th>' +
-      '<th>平均收益</th><th>中位收益</th><th>胜率</th><th>最大回撤</th>' +
-      '<th>最近成熟信号日</th><th>样本置信度</th>' +
+      '<th>评分区间</th><th>样本数</th><th>已完成</th><th>待成熟</th>' +
+      '<th>平均收益</th><th>中位数收益</th><th>胜率</th><th>最大回撤</th>' +
+      '<th>最近信号日</th><th>最近成熟日</th>' +
       '</tr></thead><tbody>' + rows.map(function(r){
-        var done = Number(r.completed || 0);
-        var d = function(x){ return esc(done > 0 ? (x || GLYPH) : GLYPH); };
         return '<tr>' +
-          '<td>分数 ' + esc(r.signal_operator_display || opd) + ' ' + esc(r.threshold) + '</td>' +
+          '<td class="mono">' + esc(r.band_label) + '</td>' +
           '<td class="mono">' + esc(r.signal_count == null ? GLYPH : r.signal_count) + '</td>' +
-          '<td class="mono">' + esc(r.completed == null ? GLYPH : r.completed) + '</td>' +
-          '<td class="mono">' + esc(r.pending == null ? GLYPH : r.pending) + '</td>' +
-          '<td class="mono">' + d(r.mean_return_display) + '</td>' +
-          '<td class="mono">' + d(r.median_return_display) + '</td>' +
-          '<td class="mono">' + d(r.win_rate_display) + '</td>' +
-          '<td class="mono">' + d(r.maximum_drawdown_display) + '</td>' +
+          '<td class="mono">' + esc(r.completed_count == null ? GLYPH : r.completed_count) + '</td>' +
+          '<td class="mono">' + esc(r.pending_count == null ? GLYPH : r.pending_count) + '</td>' +
+          '<td class="mono">' + esc(r.mean_return_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.median_return_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.win_rate_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.maximum_drawdown_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.last_signal_date || GLYPH) + '</td>' +
           '<td class="mono">' + esc(r.last_matured_signal_date || GLYPH) + '</td>' +
-          '<td>' + esc(CONF_CN[r.sample_confidence] || r.sample_confidence || GLYPH) +
-          '</td></tr>';
+          '</tr>';
       }).join('') + '</tbody></table>';
   }
-  function renderV4Threshold(){
-    var ct = (V4_THR.PRICE_LOCATION || {}).contract || {};
-    var m = el('v4-thr-method');
-    if(m){
-      var tgrid = ct.thresholds || {};
-      m.textContent = '口径：' + esc(ct.signal_rule || GLYPH) +
-        ' · 信号方向 ' + esc(ct.signal_operator || GLYPH) +
-        '（' + esc(ct.signal_operator_meaning || GLYPH) + '）' +
-        ' · 阈值网格 ' + esc(tgrid.min) + '~' + esc(tgrid.max) +
-        ' 步长 ' + esc(tgrid.step) + '（' + esc(tgrid.count) + ' 行）' +
-        ' · 持有 ' +
-        esc(ct.holding_sessions == null ? GLYPH : ct.holding_sessions) + ' 交易日 · 价格口径 ' +
-        esc(ct.price_basis || GLYPH) + '（' + esc(ct.price_asset || GLYPH) + '） · 收益口径 ' +
-        esc(ct.return_basis || GLYPH) + ' · 最大回撤 ' + esc(ct.drawdown_rule || GLYPH) +
-        ' · 费用 / 税费 / 滑点 ' + esc(ct.fees_taxes_slippage || GLYPH) +
-        ' · 样本重叠 ' + esc(ct.overlapping_policy || GLYPH) +
-        ' · 最优阈值标记：' + (ct.best_threshold_marked === false ? '未标记（TRUE）' : GLYPH) +
-        ' · 不用于模型调参：' + (ct.no_threshold_optimisation ? 'TRUE' : GLYPH);
-    }
-    renderV4ThrTable('v4-thr-pl', V4_THR.PRICE_LOCATION);
-    renderV4ThrTable('v4-thr-mc', V4_THR.MARKET_CONFIRMATION);
-    /* RC V3 / F007 —— 两张表的信号方向相反，必须都写出来：
-       市场确认 Score <= Threshold 表示「低确认 / 尚未确认」状态，
-       绝不是「确认更强」。旧页面只渲染了价格位置的含义。 */
-    var ctm = (V4_THR.MARKET_CONFIRMATION || {}).contract || {};
-    var note = el('v4-thr-mc-note');
-    if(!note){
-      note = document.createElement('div');
-      note.className = 'research-note';
-      note.id = 'v4-thr-mc-note';
-      var host = el('v4-thr-mc');
-      if(host && host.parentNode) host.parentNode.appendChild(note);
-    }
-    if(note){
-      var tgm = ctm.thresholds || {};
-      note.textContent =
-        '信号方向 ' + esc(ctm.signal_operator || GLYPH) +
-        '（' + esc(ctm.signal_operator_meaning || GLYPH) + '）' +
-        ' —— 市场确认分数越低代表越「低确认 / 尚未确认」，' +
-        '因此这里统计的是 Score <= Threshold 的低确认状态下的后续收益，' +
-        '不等于确认强度越高越好。阈值网格 ' + esc(tgm.min) + '~' + esc(tgm.max) +
-        ' 步长 ' + esc(tgm.step) + '（' + esc(tgm.count) + ' 档）。';
-    }
+  function renderV4ScoreBand(){
+    renderV4BandTable('v4-band-pl', V4_BAND.PRICE_LOCATION);
+    renderV4BandTable('v4-band-mc', V4_BAND.MARKET_CONFIRMATION);
   }
 
-  /* P01 修订块 —— A18 / A19 可解释性：把阈值口径完整摊开。 */
-  function v4P01Block(p){
-    if(!p) return '';
-    var rows = [
-      ['当前净息差', p.current_nim_display],
-      ['阈值口径', p.threshold_method_zh],
-      ['动态 P10 / P80', p.dynamic_p10_display + ' / ' + p.dynamic_p80_display],
-      ['动态窗口', esc(p.window_type) + ' ' + esc(p.window_start) + ' ~ ' + esc(p.window_end) +
-                   '（观测 ' + esc(p.observation_count) + ' 个季度）'],
-      ['自包含策略', esc(p.self_inclusion_policy)],
-      ['阈值版本', esc(p.threshold_version)]
-    ];
-    return '<div class="score-row p01-row">' +
-      '<div class="score-row-head">' +
-        '<span class="score-row-label">P01 净息差 · 阈值口径修订（Pre-Phase5 R1）</span>' +
-        '<span class="score-row-score">' + esc(p.contribution_display) + ' / ' +
-          esc(p.max_display) + '（归一化 ' + esc(p.normalized_display) + '）</span></div>' +
-      '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
-        barWidth(p.normalized_pct, 100).toFixed(2) + '%"></i></div>' +
-      '<div class="score-row-meta">' +
-        rows.map(function(r){
-          return '<span>' + esc(r[0]) + '：' + r[1] + '</span>';
-        }).join('') + '</div>' +
-      '<div class="mod-partial">本次修订只改 P01 一项；其余 16 项核心指标与另外四个柱的口径、' +
-        '契约、权重全部不变。候选选择依据结构性判据（Regime 适应性 / 经济单调性 / PIT 完整性 / ' +
-        '分布健康 / 可解释性 / 时序稳定），未使用任何未来收益参与选择。</div></div>';
-  }
+  /* A18 —— P01 修订块（Pre-Phase5 R1 研究轮次解释 + 阈值口径 + PIT 工程说明）
+     属于 PART H 明确清理对象，本轮从 Current User-visible DOM 移除。
+     Quality 柱的 17 个成员（含 P01 净息差）与其 Raw Value / 日期照常显示。 */
 
   function renderV4(d){
     var day = days[d] || null;
@@ -770,7 +683,6 @@
           (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div>' +
         '</div>';
     }).join('');
-    el('v4-no-overall').textContent = DATA.no_overall_note_zh || '';
 
     /* ② 第二主视觉 = 前瞻状态 + Risk Overlay（都不产分数） */
     var f = (day && day.forward) || {};
@@ -859,51 +771,25 @@
           esc(v4RawText(pm.pillar, m.id, m.raw)) +
           /* PART H —— Quality 的 Raw Value 后面必须带数据所属日期 */
           esc(pm.pillar === 'QUALITY' ? v4QualityDateSuffix(b, m.id) : '') + '</span>' +
-          '<span>' + statusPill(m.status) + '</span></div></div>' +
-          (pm.pillar === 'QUALITY' ? v4QualityFreshness(b, m.id) : '');
+          '<span>' + statusPill(m.status) + '</span></div></div>';
       }).join('') + '</div>');
       }
-      /* RC V5 / PART F —— 三柱的组成指标明细（与 Quality 同一套组件化结构） */
+      /* RC V5 / PART F —— 三柱的组成指标明细（与 Quality 同一套组件化结构）。
+         G01 / G03 / G05 —— 内部权重政策 ID 不再作为用户可见文案输出。 */
       if(pm.pillar === 'VALUATION' || pm.pillar === 'PRICE_LOCATION' ||
          pm.pillar === 'MARKET_CONFIRMATION'){
         h.push(v4ComponentRows(b));
-        if(b.weight_policy_id){
-          h.push('<div class="research-note">内部权重政策：' +
-            esc(b.weight_policy_id) + '（权重由用户授权冻结，'
-            + '未用未来收益 / IC / 阈值收益 / MDD 反向优化）</div>');
-        }
       }
-      /* A18 —— P01 修订的可解释性块（只出现在基本面质量柱） */
-      if(pm.pillar === 'QUALITY') h.push(v4P01Block(b.p01 || null));
       h.push('</div>');
       return h.join('');
-    }).join('') +
-    /* H03 / H04 —— 两柱怎么一起读（含负相关倾向与「低位置 + 高确认」表述） */
-    '<div class="mod-block">' +
-      '<div class="section-label mod-title"><span>价格位置与市场确认：怎么一起读</span></div>' +
-      '<div class="research-note">' + esc(V4_EXPLAIN.relationship_zh || '') + '</div>' +
-      '<div class="research-note">' + esc(V4_EXPLAIN.low_price_high_confirmation_zh || '') +
-      '</div>' +
-      /* R2 —— 研究性披露：价格位置为何维持原口径、市场确认边界为何后移。
-         文案由 Python 预计算下发，浏览器只渲染。 */
-      (V4_EXPLAIN.price_location_decision_zh ?
-        '<div class="section-label mod-title" style="margin-top:10px">' +
-        '<span>Pre-Phase5 R2 · 价格位置研究结论</span></div>' +
-        '<div class="research-note">' +
-        esc(V4_EXPLAIN.price_location_decision_zh) + '</div>' : '') +
-      (V4_EXPLAIN.market_confirmation_boundary_zh ?
-        '<div class="research-note">' +
-        esc(V4_EXPLAIN.market_confirmation_boundary_zh) + '</div>' : '') +
-      '</div></div>';
+    }).join('');
 
     el('v4-day-status').textContent = '可查询交易日 ' + dates.length + ' 个 · 起始 ' +
       (dates[0] || GLYPH) + ' · 截止 ' + (dates[dates.length - 1] || GLYPH) +
       ' · 当前 ' + d;
-    el('v4-src-note').textContent = (day && day.source_label) ||
-      '数据来源：CMB_SCORE_MODEL_V4 运行时产物（浏览器只渲染，不重算）';
-    el('v4-macro-note').textContent = V4_MACRO_NOTE || DATA.macro_note_zh || '';
-    el('v4-qfq-note').textContent = V4_QFQ_NOTE || '';
-    /* ⑥ —— 综合研判（确定性、0 LLM、无第六分） */
+    /* G08 / G09 / G10 / PART H —— 数据来源 / 运行期实现 / 前复权技术说明 /
+       Macro 饱和说明均属内部工程文案，不再写入用户可见 DOM。 */
+    /* ⑥ —— 综合研判正文（Positive / Negative / Conclusion）继续保留。 */
     renderV4Judgment(d);
   }
 
@@ -2158,11 +2044,7 @@
     V4_SM = DATA.series_meta || [];
     V4_AXIS = DATA.master_axis || {};
     V4_EARLIEST = DATA.earliest_legal_date || {};
-    V4_EXPLAIN = DATA.explain || {};
-    V4_THR = DATA.threshold_return || {};
-    V4_JC = DATA.judgment_contract || {};
-    V4_QFQ_NOTE = DATA.qfq_note_zh || '';
-    V4_MACRO_NOTE = DATA.macro_note_zh || '';
+    V4_BAND = DATA.score_band_return || {};
     /* §36 —— 展示字符串来自 Python 预计算的查找表，浏览器不自己格式化。 */
     DMAP = DATA.display_map || {};
     DMAP_PCT = DATA.display_map_pct || {};
@@ -2212,7 +2094,7 @@
       if(el('v4-hist-start')) el('v4-hist-start').value = dates[0];
       if(el('v4-hist-end')) el('v4-hist-end').value = dates[dates.length-1];
       /* ⑦ —— 101 行 × 2 张表与模型无关地在 boot 时渲染一次。 */
-      renderV4Threshold();
+      renderV4ScoreBand();
     }
     gotoDate(dates.length ? dates[dates.length-1] : null);
     fitSignals();
