@@ -791,6 +791,172 @@
        Macro 饱和说明均属内部工程文案，不再写入用户可见 DOM。 */
     /* ⑥ —— 综合研判正文（Positive / Negative / Conclusion）继续保留。 */
     renderV4Judgment(d);
+    /* RC V9 / ARCH B —— 只读质量诊断层（失败即闭门，不影响上面任何内容）。 */
+    renderV4Diagnostic();
+  }
+
+  /* =========================================================================
+   * RC V9 / ARCH B —— 质量诊断（READ-ONLY DIAGNOSTIC LAYER）
+   *
+   * PART AI —— 所有 Peer Median / Percentile / Rank / Moat / Regime /
+   *            Attribution / Top Drivers 全部由 Python 预计算；本函数只做
+   *            fetch 结果的 render / filter，绝不重算（recalc count = 0）。
+   * PART AE —— 不产出第二个 100 分；唯一正式质量分仍在五柱总览里。
+   * PART AK —— 诊断数据不可用时显示「数据暂不可用」，不得用旧数据冒充。
+   * PART AG —— 不可比不是缺陷：只说「暂不横向排名」，不暴露 Provider / API /
+   *            Gate 编号等工程术语。
+   * ======================================================================= */
+  /* PART AI —— 诊断数字同样由 Python 预计算展示串（payload.display_map_diag），
+     浏览器只做「精确字符串查表」，绝不 toFixed / Math.round，
+     失配计入 __CMB_DIAG_FMT_MISS__（门禁要求恒为 0）。 */
+  window.__CMB_DIAG_FMT_MISS__ = {count: 0, keys: {}};
+  var DIAG_DMAP = {};
+  function diagLoadMap(){
+    DIAG_DMAP = (DATA && DATA.quality_diagnostic_data &&
+                 DATA.quality_diagnostic_data.display_map_diag) || {};
+  }
+  function diagNum(v, dp){
+    if(v === null || v === undefined || v === '') return GLYPH;
+    var d = (dp === undefined ? 2 : dp);
+    var k = String(v) + '|' + d;
+    var s = DIAG_DMAP[k];
+    if(s === undefined){
+      var m = window.__CMB_DIAG_FMT_MISS__;
+      m.count++; m.keys[k] = 1;
+      s = DIAG_DMAP[String(Number(v)) + '|' + d];
+    }
+    return (s === undefined) ? GLYPH : s;
+  }
+  function diagChip(label, value){
+    return '<div class="kpi-card diag-chip"><div class="kpi-label">' +
+      esc(label) + '</div><div class="kpi-rate">' + value + '</div></div>';
+  }
+  function diagRow(cells){
+    return '<div class="diag-row">' + cells.map(function(c){
+      return '<span>' + c + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function renderV4Diagnostic(){
+    var qd = DATA && DATA.quality_diagnostic_data;
+    var host1 = document.getElementById('v4-diag-chips');
+    var host2 = document.getElementById('v4-diag-detail');
+    if(!host1 || !host2) return;
+    diagLoadMap();
+
+    /* ---- Fail-Closed（PART AK / PART AL）---- */
+    if(!qd){
+      host1.innerHTML = diagChip('质量诊断', '数据暂不可用');
+      host2.innerHTML = '';
+      return;
+    }
+
+    var reg = qd.banking_regime || {};
+    var moat = qd.moat_status || {};
+    var attr = qd.attribution || {};
+    var base = (attr.periods || {}).SINCE_2021_BASELINE || {};
+
+    /* ---- 三枚摘要 chip ---- */
+    host1.innerHTML =
+      diagChip('行业环境', esc(reg.public_zh || GLYPH)) +
+      diagChip('竞争优势', esc(moat.public_zh || GLYPH)) +
+      diagChip('评分变化',
+        (base.quality_delta === null || base.quality_delta === undefined)
+          ? GLYPH
+          : ('自 2021 基准 ' + (base.quality_delta > 0 ? '+' : '') +
+             diagNum(base.quality_delta, 2)));
+
+    /* ---- 展开区 ---- */
+    var h = [];
+
+    /* ① 变化归因 */
+    h.push('<details class="diag-d"><summary>① 评分变化归因</summary>');
+    h.push('<div class="diag-note">以下为「评分变化贡献」，不是因果关系判断。</div>');
+    var td = attr.top_drivers || {};
+    var neg = td.top_negative || [], pos = td.top_positive || [];
+    h.push('<div class="diag-sub">主要负贡献</div>');
+    h.push(neg.length ? neg.map(function(x){
+      return diagRow([esc(x.metric_name_zh),
+        (x.delta_earned_points > 0 ? '+' : '') + diagNum(x.delta_earned_points, 2)]);
+    }).join('') : '<div class="diag-note">' + GLYPH + '</div>');
+    h.push('<div class="diag-sub">主要正贡献</div>');
+    h.push(pos.length ? pos.map(function(x){
+      return diagRow([esc(x.metric_name_zh),
+        (x.delta_earned_points > 0 ? '+' : '') + diagNum(x.delta_earned_points, 2)]);
+    }).join('') : '<div class="diag-note">' + GLYPH + '</div>');
+    var per = attr.periods || {};
+    Object.keys(per).forEach(function(k){
+      var p = per[k] || {};
+      var nm = {'SINCE_2021_BASELINE': '自 2021 基准',
+                'LAST_3_YEARS': '近三年', 'LAST_1_YEAR': '近一年'}[k] || k;
+      h.push(diagRow([esc(nm),
+        (p.quality_delta === null || p.quality_delta === undefined)
+          ? GLYPH
+          : ((p.quality_delta > 0 ? '+' : '') + diagNum(p.quality_delta, 2))]));
+    });
+    h.push('</details>');
+
+    /* ② 同行比较 */
+    h.push('<details class="diag-d"><summary>② 同行比较</summary>');
+    h.push('<div class="diag-note">比较对象为 8 家全国性股份制商业银行；' +
+           '招商银行不参与同行中位数计算。</div>');
+    var ok = (qd.peer_metrics || []).filter(function(m){
+      return m.coverage_status === 'SUFFICIENT';
+    });
+    var ng = (qd.peer_metrics || []).filter(function(m){
+      return m.coverage_status !== 'SUFFICIENT';
+    });
+    h.push('<div class="diag-table" role="table">');
+    h.push('<div class="diag-row diag-head" role="row">' +
+      ['指标', '招行', '同行中位数', '行业值', '同行位置', '优势变化'].map(function(t){
+        return '<span role="columnheader">' + esc(t) + '</span>';
+      }).join('') + '</div>');
+    ok.forEach(function(m){
+      var posTxt = (m.rank === null || m.rank === undefined)
+        ? GLYPH : ('第 ' + diagNum(m.rank, 0) + ' / ' + diagNum((m.n_valid || 0) + 1, 0));
+      h.push('<div class="diag-row" role="row">' +
+        '<span>' + esc(m.metric_name_zh) + '</span>' +
+        '<span>' + diagNum(m.cmb_value, 2) + esc(m.unit || '') + '</span>' +
+        '<span>' + diagNum(m.peer_median, 2) + '</span>' +
+        '<span>' + (m.industry_aggregate === null || m.industry_aggregate === undefined
+                    ? GLYPH : diagNum(m.industry_aggregate, 2)) + '</span>' +
+        '<span>' + posTxt + '</span>' +
+        '<span>' + esc(m.moat_status_zh || GLYPH) + '</span></div>');
+    });
+    h.push('</div>');
+    if(ng.length){
+      h.push('<div class="diag-sub">暂不横向排名</div>');
+      h.push('<div class="diag-note">' + esc(qd.unverified_public_zh ||
+             '部分银行披露口径不同，当前不做横向排名。') + '</div>');
+      h.push('<div class="diag-row diag-wrap">' + ng.map(function(m){
+        return esc(m.metric_name_zh);
+      }).join(' · ') + '</div>');
+    }
+    var rg = qd.relative_aggregate_gate || {};
+    if(rg.status && rg.status !== 'PUBLISHED'){
+      h.push('<div class="diag-note">同行综合总分：暂不发布' +
+             '（可比指标权重占比不足，不做估算补齐）。</div>');
+    }
+    h.push('</details>');
+
+    /* ③ 行业环境 */
+    h.push('<details class="diag-d"><summary>③ 行业环境</summary>');
+    h.push('<div class="diag-note">描述银行业共同经营环境，不参与评分。</div>');
+    var grp = reg.groups_zh || {};
+    Object.keys(grp).forEach(function(k){
+      h.push(diagRow([esc(k), esc(grp[k])]));
+    });
+    h.push('<div class="diag-sub">分指标方向</div>');
+    (reg.metrics || []).forEach(function(r){
+      if(r.status !== 'PUBLISHED') return;
+      h.push(diagRow([esc(r.metric_name_zh),
+                      esc(r.regime_classification_zh || GLYPH)]));
+    });
+    h.push('<div class="diag-note">「股份行同行中位数」与「银行业整体」为两个不同口径，' +
+           '不合并成一个数值。</div>');
+    h.push('</details>');
+
+    host2.innerHTML = h.join('');
   }
 
   /* ④ 五柱历史：五柱共享左轴 0~100，招商银行前复权收盘价走独立右轴（RMB）。

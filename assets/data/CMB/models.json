@@ -11,11 +11,14 @@
     "risk_overlay",
     "history",
     "judgment",
-    "score_band_return"
+    "score_band_return",
+    "quality_diagnostic"
    ],
-   "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V3",
+   "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V4",
    "data_dir": "CMB_SCORE_MODEL_V4",
-   "model_fingerprint": "8d438b709888d64596e3c46046424bbde51c331c0f3739dd0ffcbca55881b487",
+   "diagnostic_contract_id": "CMB_V4_QUALITY_DIAGNOSTIC_CONTRACT_V1",
+   "diagnostic_payload_file": "assets/data/CMB/cmb_v4_quality_diagnostic.json",
+   "model_fingerprint": "53121253aa546693be996d9f9d8dbe93528cb036351c2770a85d36c768c50dc1",
    "model_id": "CMB_SCORE_MODEL_V4",
    "model_name_zh": "招商银行量化评分模型 V4",
    "old_rc_v4_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V2",
@@ -24,9 +27,12 @@
    "old_rc_v5_rc_id": "CMB_V4_RELEASE_CANDIDATE_V5",
    "old_rc_v6_payload_version": "RC_V6_V1",
    "old_rc_v6_rc_id": "CMB_V4_RELEASE_CANDIDATE_V6",
+   "old_rc_v7_rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
+   "old_rc_v8_payload_version": "RC_V8_V1",
+   "old_rc_v8_rc_id": "CMB_V4_RELEASE_CANDIDATE_V8",
    "operational_status": "RELEASE_CANDIDATE",
    "overall_score": "FORBIDDEN",
-   "payload_version": "RC_V7_V1",
+   "payload_version": "RC_V9_V1",
    "presentation_truth": {
     "browser_business_recalc_count": 0,
     "forbidden_public_copy_match_count": 0,
@@ -38,7 +44,7 @@
    },
    "production_authority": false,
    "public_visible": true,
-   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V7",
+   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
    "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_REAUDIT",
    "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
    "rc_v6_scope": {
@@ -89,11 +95,8 @@
     "CMB_V4_RELEASE_CANDIDATE_V5",
     "CMB_V4_RELEASE_CANDIDATE_V6"
    ],
-   "superseded_rc_status": {
-    "CMB_V4_RELEASE_CANDIDATE_V4": "SUPERSEDED_BY_USER_AUTHORIZED_WEIGHT_AND_FRESHNESS_AMENDMENT",
-    "CMB_V4_RELEASE_CANDIDATE_V5": "SUPERSEDED_BY_FRONTEND_PRESENTATION_TRUTH_AND_EVIDENCE_CLOSURE",
-    "CMB_V4_RELEASE_CANDIDATE_V6": "SUPERSEDED_BY_SCORE_BAND_RETURN_AND_PUBLIC_COPY_CLEANUP"
-   },
+   "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V8",
+   "superseded_rc_status": "HISTORICAL_SUPERSEDED_BY_ARCH_B_DIAGNOSTIC_LAYER",
    "v4_production_authority": false,
    "v4_production_scheduler": "NOT_LOADED",
    "weight_amendment": {

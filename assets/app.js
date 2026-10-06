@@ -216,13 +216,28 @@
         STATE.payload = view;
         var latest = (view.dates || [])[(view.dates || []).length - 1];
         var year = String(latest || "").slice(0, 4);
+        /* RC V9 / ARCH B —— 质量诊断是独立的只读辅助层。
+           成功则挂到 view.quality_diagnostic_data；失败则 Fail-Closed 标记
+           unavailable，正式五柱照常渲染（PART AK / PART AL）。 */
+        var withDiag = function () {
+          var qd = view.quality_diagnostic;
+          if (!qd || !qd.enabled || !qd.payload_file) { return Promise.resolve(); }
+          return getJSON(qd.payload_file).then(function (d) {
+            view.quality_diagnostic_data = d;
+          }).catch(function () {
+            view.quality_diagnostic_data = null;
+            view.quality_diagnostic_unavailable = true;
+          });
+        };
         var ready = function () {
-          paintIdentity(view);
-          window.__CMB_SHELL_BOOT__(view);
-          if (push) {
-            var url = "?bank=" + STATE.bank + "&model=" + STATE.model;
-            if (location.search !== url) history.pushState({}, "", url);
-          }
+          withDiag().then(function () {
+            paintIdentity(view);
+            window.__CMB_SHELL_BOOT__(view);
+            if (push) {
+              var url = "?bank=" + STATE.bank + "&model=" + STATE.model;
+              if (location.search !== url) history.pushState({}, "", url);
+            }
+          });
         };
         if (view.days_lazy && year) { loadYear(STATE.bank, STATE.model, year, ready); }
         else { ready(); }

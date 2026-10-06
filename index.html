@@ -89,8 +89,18 @@
     <div class="selector-status" id="v4-day-status">—</div>
   </section>
 
+  <!-- RC V9 / ARCH B —— 只读质量诊断层。
+       放在五柱总览之后、前瞻状态之前：贴近「基本面质量」主卡，但不改变五柱
+       布局 / 大小 / 顺序，也不产生第二个质量总分。 -->
+  <section class="card" id="v4-quality-diagnostic" data-v4="1" hidden>
+    <div class="card-title"><span class="ord">②</span>质量诊断 · 只读参考</div>
+    <div class="card-subtitle">以下三项为解释性参考，不参与「基本面质量」评分计算。</div>
+    <div class="kpi-grid kpi-grid-3" id="v4-diag-chips"></div>
+    <div id="v4-diag-detail"></div>
+  </section>
+
   <section class="card" id="v4-second" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">②</span>前瞻状态 · Risk Overlay（独立）</div>
+    <div class="card-title"><span class="ord">③</span>前瞻状态 · Risk Overlay（独立）</div>
     <div class="card-subtitle">第二主视觉只映射「前瞻 + 风险」，不产生任何综合分。</div>
     <div class="kpi-grid kpi-grid-2">
       <div class="kpi-card" id="v4-fwd-card">
@@ -107,12 +117,12 @@
   </section>
 
   <section class="card" id="v4-details" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">③</span>五柱明细 · 逐项可解释</div>
+    <div class="card-title"><span class="ord">④</span>五柱明细 · 逐项可解释</div>
     <div id="v4-pillar-blocks"></div>
   </section>
 
   <section class="card" id="v4-history-card" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">④</span>五柱历史 · 价格走独立右轴</div>
+    <div class="card-title"><span class="ord">⑤</span>五柱历史 · 价格走独立右轴</div>
     <div class="card-subtitle">五柱共享同一条 0~100 左轴；招商银行前复权收盘价走独立右轴（RMB），
       绝不归一化到 0~100 与评分共轴。缺失日显式断开，绝不前向填充。</div>
     <!-- ISSUE-06 —— 单日定位：输入任意日期，回退到不晚于该日的最近交易日并显式提示。
