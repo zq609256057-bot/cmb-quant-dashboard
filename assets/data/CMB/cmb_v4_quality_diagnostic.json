@@ -316,7 +316,7 @@
  "diagnostic_architecture": "ARCH_B_ABSOLUTE_PLUS_RELATIVE_REGIME_ATTRIBUTION_DIAGNOSTICS",
  "diagnostic_contract_id": "CMB_V4_QUALITY_DIAGNOSTIC_CONTRACT_V1",
  "diagnostic_contract_sha256": "4bc6c2176118208cb12867d70307e1c0182a088313ed81b291da93d94d373e74",
- "diagnostic_payload_sha256": "dc3aafbcde0ad695dcab911a3e0f1060e173da33dea5035f62d9cbd4deecf50a",
+ "diagnostic_payload_sha256": "364252737264e8e4ad8d23e9f94f76ede20ef089e1f0f2096b577364f823976c",
  "display_map_diag": {
   "-0.0018842105|0": "-0",
   "-0.0018842105|2": "-0.00",
@@ -765,7 +765,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 1.23
   },
@@ -791,7 +791,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 202.87
   },
@@ -817,7 +817,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 10.72
   },
@@ -843,7 +843,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 1.54
   },
@@ -869,7 +869,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 0.58
   },
@@ -895,7 +895,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T13:47:54.503217+08:00",
+   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
    "unit": "%",
    "value": 7.72
   }
@@ -916,14 +916,14 @@
   "model_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V4",
   "model_fingerprint": "53121253aa546693be996d9f9d8dbe93528cb036351c2770a85d36c768c50dc1",
   "model_id": "CMB_SCORE_MODEL_V4",
-  "payload_version": "RC_V11_V1",
-  "release_candidate_id": "CMB_V4_RELEASE_CANDIDATE_V11",
+  "payload_version": "RC_V12_V1",
+  "release_candidate_id": "CMB_V4_RELEASE_CANDIDATE_V12",
   "report_period": "2026-06-30",
   "schema_version": "CMB_V4_QUALITY_DIAGNOSTIC_PAYLOAD_V1",
   "staleness_rule": "PAYLOAD_IDENTITY_MISMATCH__NOT_CALENDAR_AGE",
   "staleness_rule_zh": "过期判定只比较载荷身份与当前 Release 预期身份，不按自然日年龄判定。"
  },
- "payload_version": "RC_V11_V1",
+ "payload_version": "RC_V12_V1",
  "peer_metrics": [
   {
    "available_from": "2026-08-29",
@@ -1034,7 +1034,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_COMPARABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_COMPARABLE",
+   "direction": null,
    "evidence_strength": "NOT_COMPARABLE",
    "group": "ASSET_QUALITY_RISK",
    "group_zh": "资产质量与风险",
@@ -1063,7 +1065,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_COMPARABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_COMPARABLE",
+   "direction": null,
    "evidence_strength": "NOT_COMPARABLE",
    "group": "ASSET_QUALITY_RISK",
    "group_zh": "资产质量与风险",
@@ -1127,7 +1131,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_APPLICABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_APPLICABLE",
+   "direction": null,
    "evidence_strength": "NOT_APPLICABLE",
    "group": "SHAREHOLDER_POLICY",
    "group_zh": "股东回报与政策",
@@ -1208,6 +1214,8 @@
      "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/DSIB_GOV_REPOST.html",
      "publication_date": "2026-02-14",
      "publisher": "中国人民银行 · 国家金融监督管理总局（地方政府官网转载）",
+     "source_hash": "a7b7735bd4120195be737cfd9beac193690da2385ff3d5ef03659ec60d0eafea",
+     "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/DSIB_GOV_REPOST.html",
      "title": "2025 年度我国系统重要性银行名单（吉林省地方金融管理局官方转载）",
      "url": "https://jr.jl.gov.cn/jrzx/jrdt/jgdt/202602/t20260214_3554740.html"
     },
@@ -1274,9 +1282,15 @@
       "reported_cet1_scope": null,
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
-       "bank_disclosed_requirement_derivation_zh": null,
+       "bank_disclosed_requirement_admitted": false,
+       "bank_disclosed_requirement_available_from": null,
+       "bank_disclosed_requirement_derivation_zh": "该报告期无当时可获得的银行自身披露记录；按 UNKNOWN 处理，不从其它报告期或当前披露回填。",
+       "bank_disclosed_requirement_effective_from": null,
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": null,
+       "bank_disclosed_requirement_publication_date": null,
        "bank_disclosed_requirement_quote": null,
+       "bank_disclosed_requirement_report_period": null,
        "bank_disclosed_requirement_source": null,
        "bank_disclosed_requirement_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
        "capital_conservation_buffer_pp": 2.5,
@@ -1298,8 +1312,10 @@
        "dsib_group": 2,
        "dsib_list_publication_date": "2026-02-14",
        "gsib_buffer_pp": null,
+       "gsib_derivation_basis_zh": null,
        "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": null,
        "measurement_method": null,
        "measurement_method_quote": null,
        "measurement_method_source": null,
@@ -1320,6 +1336,8 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
@@ -1355,9 +1373,15 @@
       "reported_cet1_scope": null,
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
-       "bank_disclosed_requirement_derivation_zh": null,
+       "bank_disclosed_requirement_admitted": false,
+       "bank_disclosed_requirement_available_from": null,
+       "bank_disclosed_requirement_derivation_zh": "该报告期无当时可获得的银行自身披露记录；按 UNKNOWN 处理，不从其它报告期或当前披露回填。",
+       "bank_disclosed_requirement_effective_from": null,
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": null,
+       "bank_disclosed_requirement_publication_date": null,
        "bank_disclosed_requirement_quote": null,
+       "bank_disclosed_requirement_report_period": null,
        "bank_disclosed_requirement_source": null,
        "bank_disclosed_requirement_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
        "capital_conservation_buffer_pp": 2.5,
@@ -1379,8 +1403,10 @@
        "dsib_group": 1,
        "dsib_list_publication_date": "2026-02-14",
        "gsib_buffer_pp": null,
+       "gsib_derivation_basis_zh": null,
        "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": null,
        "measurement_method": null,
        "measurement_method_quote": null,
        "measurement_method_source": null,
@@ -1401,6 +1427,8 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
@@ -1428,7 +1456,9 @@
       "method_official_quote": "其中：权重法（信用风险加权资产）",
       "method_source": {
        "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CMBC.txt",
-       "quote": "其中：权重法"
+       "quote": "其中：权重法",
+       "source_hash": "52a776141d055c08e4b3b8d7971614ef2b7285aa2bf5644bea201b09064a2826",
+       "source_hash_present": true
       },
       "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
       "public_regulatory_headroom": 1.67,
@@ -1439,14 +1469,22 @@
       "reported_cet1_scope": "监管并表口径",
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-29",
        "bank_disclosed_requirement_derivation_zh": "5.0 + 2.5 + 0.00 + 0.25 = 7.75（KM1 全栈明示）",
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 7.75,
+       "bank_disclosed_requirement_publication_date": "2026-08-29",
        "bank_disclosed_requirement_quote": "储备资本要求 2.50%；逆周期资本要求 0.00%；国内系统重要性银行附加资本要求 0.25%",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CMBC.txt",
-        "quote": "逆周期资本要求（%）|0.00"
+        "quote": null,
+        "source_hash": "52a776141d055c08e4b3b8d7971614ef2b7285aa2bf5644bea201b09064a2826",
+        "source_hash_present": true
        },
-       "bank_disclosed_requirement_status": "OFFICIAL_KM1_EXPLICIT",
+       "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
        "ccb_evidence_status": "OFFICIAL_RULE_TEXT",
        "ccyb_available_from": "2026-08-28",
@@ -1460,7 +1498,9 @@
        "consolidation_scope_quote": "（一）KM1：监管并表关键审慎监管指标",
        "consolidation_scope_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CMBC.txt",
-        "quote": "KM1：监管并表关键审慎监管指标"
+        "quote": "KM1：监管并表关键审慎监管指标",
+        "source_hash": "52a776141d055c08e4b3b8d7971614ef2b7285aa2bf5644bea201b09064a2826",
+        "source_hash_present": true
        },
        "consolidation_scope_status": "OFFICIAL_KM1_EXPLICIT",
        "dsib_available_from": "2026-02-14",
@@ -1468,14 +1508,18 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 1,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 7.75，减去已取证的组件合计 7.75，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": "权重法",
        "measurement_method_quote": "其中：权重法（信用风险加权资产）",
        "measurement_method_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CMBC.txt",
-        "quote": "其中：权重法"
+        "quote": "其中：权重法",
+        "source_hash": "52a776141d055c08e4b3b8d7971614ef2b7285aa2bf5644bea201b09064a2826",
+        "source_hash_present": true
        },
        "measurement_method_status": "OFFICIAL_KM1_EXPLICIT",
        "minimum_cet1_evidence_status": "OFFICIAL_RULE_TEXT",
@@ -1485,7 +1529,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 7.75,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-29）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1494,13 +1538,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "OFFICIAL_KM1_EXPLICIT",
       "scope_official_quote": "（一）KM1：监管并表关键审慎监管指标",
@@ -1521,7 +1565,9 @@
       "method_official_quote": "信用风险加权资产采用权重法计量，市场风险加权资产采用标准法计量，操作风险加权资产采用标准法计量",
       "method_source": {
        "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/PAB.txt",
-       "quote": "信用风险加权资产采用权重法计量"
+       "quote": "信用风险加权资产采用权重法计量",
+       "source_hash": "4188ff09fd968cd618b2e7da19acb331224c7634cbbb3a645f8153396e78a0f4",
+       "source_hash_present": true
       },
       "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
       "public_regulatory_headroom": 1.57,
@@ -1532,12 +1578,20 @@
       "reported_cet1_scope": "本集团口径（并表）",
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-15",
        "bank_disclosed_requirement_derivation_zh": "官方明示监管值 7.75（注 2：本行执行系统重要性银行附加资本 0.25% 的要求）",
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 7.75,
+       "bank_disclosed_requirement_publication_date": "2026-08-15",
        "bank_disclosed_requirement_quote": "核心一级资本充足率 ≥7.75（注2）",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/PAB.txt",
-        "quote": "核心一级资本充足率|≥7.75（注2）"
+        "quote": null,
+        "source_hash": "4188ff09fd968cd618b2e7da19acb331224c7634cbbb3a645f8153396e78a0f4",
+        "source_hash_present": true
        },
        "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
@@ -1553,7 +1607,9 @@
        "consolidation_scope_quote": "以上监管指标根据监管相关规定计算，除资本充足率指标为本集团口径外，其他指标均为本行口径",
        "consolidation_scope_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/PAB.txt",
-        "quote": "除资本充足率指标为本集团口径外"
+        "quote": "除资本充足率指标为本集团口径外",
+        "source_hash": "4188ff09fd968cd618b2e7da19acb331224c7634cbbb3a645f8153396e78a0f4",
+        "source_hash_present": true
        },
        "consolidation_scope_status": "OFFICIAL_TEXT_EXPLICIT",
        "dsib_available_from": "2026-02-14",
@@ -1561,14 +1617,18 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 1,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 7.75，减去已取证的组件合计 7.75，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": "权重法",
        "measurement_method_quote": "信用风险加权资产采用权重法计量，市场风险加权资产采用标准法计量，操作风险加权资产采用标准法计量",
        "measurement_method_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/PAB.txt",
-        "quote": "信用风险加权资产采用权重法计量"
+        "quote": "信用风险加权资产采用权重法计量",
+        "source_hash": "4188ff09fd968cd618b2e7da19acb331224c7634cbbb3a645f8153396e78a0f4",
+        "source_hash_present": true
        },
        "measurement_method_status": "OFFICIAL_TEXT_EXPLICIT",
        "minimum_cet1_evidence_status": "OFFICIAL_RULE_TEXT",
@@ -1578,7 +1638,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 7.75,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-15）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1587,13 +1647,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "OFFICIAL_TEXT_EXPLICIT",
       "scope_official_quote": "以上监管指标根据监管相关规定计算，除资本充足率指标为本集团口径外，其他指标均为本行口径",
@@ -1622,12 +1682,20 @@
       "reported_cet1_scope": "金融监管总局并表口径",
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-27",
        "bank_disclosed_requirement_derivation_zh": null,
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 8.0,
+       "bank_disclosed_requirement_publication_date": "2026-08-27",
        "bank_disclosed_requirement_quote": "核心一级资本充足率 ≥8.00%（监管值）",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CITIC.txt",
-        "quote": "核心一级资本充足率|≥8.00%|9.37%"
+        "quote": null,
+        "source_hash": "6f81bea47f9897d4a69fc84343becbca97c23647413e6b855c09887aebb31bc8",
+        "source_hash_present": true
        },
        "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
@@ -1643,7 +1711,9 @@
        "consolidation_scope_quote": "注：本表指标均按金融监管总局并表口径计算。",
        "consolidation_scope_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CITIC.txt",
-        "quote": "本表指标均按金融监管总局并表口径计算"
+        "quote": "本表指标均按金融监管总局并表口径计算",
+        "source_hash": "6f81bea47f9897d4a69fc84343becbca97c23647413e6b855c09887aebb31bc8",
+        "source_hash_present": true
        },
        "consolidation_scope_status": "OFFICIAL_TEXT_EXPLICIT",
        "dsib_available_from": "2026-02-14",
@@ -1651,9 +1721,11 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 2,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 8.0，减去已取证的组件合计 8.0，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": null,
        "measurement_method_quote": null,
        "measurement_method_source": null,
@@ -1665,7 +1737,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 8.0,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-27）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1674,13 +1746,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "OFFICIAL_TEXT_EXPLICIT",
       "scope_official_quote": "注：本表指标均按金融监管总局并表口径计算。",
@@ -1701,7 +1773,9 @@
       "method_official_quote": "采用权重法计量信用风险加权资产，采用标准法计量市场风险加权资产，采用标准法计量操作风险加权资产",
       "method_source": {
        "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/HXB.txt",
-       "quote": "采用权重法计量信用风险加权资产"
+       "quote": "采用权重法计量信用风险加权资产",
+       "source_hash": "becb515b1b78610a09a241fa936f79be305b6e0e19830cd1156d91eaee43e655",
+       "source_hash_present": true
       },
       "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
       "public_regulatory_headroom": 1.09,
@@ -1712,12 +1786,20 @@
       "reported_cet1_scope": "监管并表口径",
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-29",
        "bank_disclosed_requirement_derivation_zh": "官方明示监管值 7.75；并明示「储备资本和逆周期资本要求为 2.5%」",
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 7.75,
+       "bank_disclosed_requirement_publication_date": "2026-08-29",
        "bank_disclosed_requirement_quote": "核心一级资本充足率 ≥7.75（监管值）",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/HXB.txt",
-        "quote": "核心一级资本充足率|≥7.75|8.84"
+        "quote": null,
+        "source_hash": "becb515b1b78610a09a241fa936f79be305b6e0e19830cd1156d91eaee43e655",
+        "source_hash_present": true
        },
        "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
@@ -1733,7 +1815,9 @@
        "consolidation_scope_quote": "核心一级资本充足率……为监管并表口径",
        "consolidation_scope_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/HXB.txt",
-        "quote": "为监管并表口径"
+        "quote": "为监管并表口径",
+        "source_hash": "becb515b1b78610a09a241fa936f79be305b6e0e19830cd1156d91eaee43e655",
+        "source_hash_present": true
        },
        "consolidation_scope_status": "OFFICIAL_TEXT_EXPLICIT",
        "dsib_available_from": "2026-02-14",
@@ -1741,14 +1825,18 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 1,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 7.75，减去已取证的组件合计 7.75，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": "权重法",
        "measurement_method_quote": "采用权重法计量信用风险加权资产，采用标准法计量市场风险加权资产，采用标准法计量操作风险加权资产",
        "measurement_method_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/HXB.txt",
-        "quote": "采用权重法计量信用风险加权资产"
+        "quote": "采用权重法计量信用风险加权资产",
+        "source_hash": "becb515b1b78610a09a241fa936f79be305b6e0e19830cd1156d91eaee43e655",
+        "source_hash_present": true
        },
        "measurement_method_status": "OFFICIAL_TEXT_EXPLICIT",
        "minimum_cet1_evidence_status": "OFFICIAL_RULE_TEXT",
@@ -1758,7 +1846,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 7.75,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-29）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1767,13 +1855,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "OFFICIAL_TEXT_EXPLICIT",
       "scope_official_quote": "核心一级资本充足率……为监管并表口径",
@@ -1802,14 +1890,22 @@
       "reported_cet1_scope": "监管并表口径",
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-28",
        "bank_disclosed_requirement_derivation_zh": "5.0（最低）+ 2.5（储备）+ 0（逆周期）+ 0.5（第二组）= 8.00",
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 8.0,
+       "bank_disclosed_requirement_publication_date": "2026-08-28",
        "bank_disclosed_requirement_quote": "公司在国内系统重要性银行名单中位列第二组，附加核心一级资本要求为 0.5%",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/SPDB.txt",
-        "quote": "位列第二组，附加核心一级资本要求为0.5%"
+        "quote": null,
+        "source_hash": "13674f75992961a1c3981eda5d442f91df13fb2769ed98d0795c1b96643ed5ab",
+        "source_hash_present": true
        },
-       "bank_disclosed_requirement_status": "OFFICIAL_TEXT_DERIVED",
+       "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
        "ccb_evidence_status": "OFFICIAL_RULE_TEXT",
        "ccyb_available_from": "2026-08-28",
@@ -1823,7 +1919,9 @@
        "consolidation_scope_quote": "报告期末，本集团监管并表口径下核心一级资本充足率为 9.05%",
        "consolidation_scope_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/SPDB.txt",
-        "quote": "本集团监管并表口径下核心一级资本充足率为9.05%"
+        "quote": "本集团监管并表口径下核心一级资本充足率为9.05%",
+        "source_hash": "13674f75992961a1c3981eda5d442f91df13fb2769ed98d0795c1b96643ed5ab",
+        "source_hash_present": true
        },
        "consolidation_scope_status": "OFFICIAL_TEXT_EXPLICIT",
        "dsib_available_from": "2026-02-14",
@@ -1831,9 +1929,11 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 2,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 8.0，减去已取证的组件合计 8.0，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": null,
        "measurement_method_quote": null,
        "measurement_method_source": null,
@@ -1845,7 +1945,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 8.0,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-28）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1854,13 +1954,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "OFFICIAL_TEXT_EXPLICIT",
       "scope_official_quote": "报告期末，本集团监管并表口径下核心一级资本充足率为 9.05%",
@@ -1881,7 +1981,9 @@
       "method_official_quote": "信用风险加权资产采用权重法、市场风险和操作风险加权资产采用标准法计量",
       "method_source": {
        "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CZB.txt",
-       "quote": "信用风险加权资产采用权重法"
+       "quote": "信用风险加权资产采用权重法",
+       "source_hash": "6ea4b15b8f3389e60d6f4f8ee4edba46bd4182be05c842e7647127905ce9e8ab",
+       "source_hash_present": true
       },
       "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
       "public_regulatory_headroom": 0.87,
@@ -1892,14 +1994,22 @@
       "reported_cet1_scope": null,
       "requirement_available_from": "2026-08-28",
       "requirement_components": {
+       "bank_disclosed_requirement_admitted": true,
+       "bank_disclosed_requirement_available_from": "2026-08-27",
        "bank_disclosed_requirement_derivation_zh": "核心一级最低 5.0（规则）+ 储备与逆周期 2.50（官方披露合计）+ 附加 0（官方披露「–」，新进入名单 2028-01-01 才适用）= 7.50",
+       "bank_disclosed_requirement_effective_from": "2026-06-30",
+       "bank_disclosed_requirement_effective_to": null,
        "bank_disclosed_requirement_pp": 7.5,
+       "bank_disclosed_requirement_publication_date": "2026-08-27",
        "bank_disclosed_requirement_quote": "最低资本要求 8.00%；储备资本和逆周期资本要求 2.50%；附加资本要求 –",
+       "bank_disclosed_requirement_report_period": "2026-06-30",
        "bank_disclosed_requirement_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CZB.txt",
-        "quote": "储备资本和逆周期资本要求(%)|2.50|附加资本要求(%)|–"
+        "quote": null,
+        "source_hash": "6ea4b15b8f3389e60d6f4f8ee4edba46bd4182be05c842e7647127905ce9e8ab",
+        "source_hash_present": true
        },
-       "bank_disclosed_requirement_status": "OFFICIAL_TEXT_DERIVED",
+       "bank_disclosed_requirement_status": "OFFICIAL_TEXT_EXPLICIT",
        "capital_conservation_buffer_pp": 2.5,
        "ccb_evidence_status": "OFFICIAL_RULE_TEXT",
        "ccyb_available_from": "2026-08-28",
@@ -1918,14 +2028,18 @@
        "dsib_evidence_status": "OFFICIAL_RULE_TEXT",
        "dsib_group": 0,
        "dsib_list_publication_date": "2026-02-14",
-       "gsib_buffer_pp": null,
-       "gsib_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
+       "gsib_buffer_pp": 0.0,
+       "gsib_derivation_basis_zh": "同期官方 KM1 / 定期报告明示整行要求 7.5，减去已取证的组件合计 7.5，残差为 0；该行官方披露本身未列示 G-SIB 附加资本，故按 0 计。（同源同期官方证据推导，非默认 0，也非跨期回填）",
+       "gsib_evidence_status": "OFFICIAL_TEXT_DERIVED",
        "gsib_note_zh": "本轮未取得 FSB/BIS 全球系统重要性银行名单官方原文，不做断言；该组件 UNKNOWN 时整行不得进入 Primary。",
+       "gsib_residual_pp": 0.0,
        "measurement_method": "权重法",
        "measurement_method_quote": "信用风险加权资产采用权重法、市场风险和操作风险加权资产采用标准法计量",
        "measurement_method_source": {
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/CZB.txt",
-        "quote": "信用风险加权资产采用权重法"
+        "quote": "信用风险加权资产采用权重法",
+        "source_hash": "6ea4b15b8f3389e60d6f4f8ee4edba46bd4182be05c842e7647127905ce9e8ab",
+        "source_hash_present": true
        },
        "measurement_method_status": "OFFICIAL_TEXT_EXPLICIT",
        "minimum_cet1_evidence_status": "OFFICIAL_RULE_TEXT",
@@ -1935,7 +2049,7 @@
        "pillar2_specific_requirement_status": "UNKNOWN__NOT_PUBLICLY_DISCLOSED",
        "public_regulatory_requirement_pp": 7.5,
        "requirement_available_from": "2026-08-28",
-       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值）",
+       "requirement_basis_zh": "银行自身官方披露的适用要求（监管值，报告期 2026-06-30，发布日 2026-08-27）",
        "rule_available_from": "2023-11-01",
        "rule_effective_from": "2024-01-01",
        "rule_publication_date": "2023-11-01",
@@ -1944,13 +2058,13 @@
         "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "publication_date": "2023-11-01",
         "publisher": "国家金融监督管理总局",
+        "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+        "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
         "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
         "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
        },
        "true_total_requirement_status": "UNKNOWN__PILLAR2_NOT_PUBLICLY_DISCLOSED",
-       "unknown_components": [
-        "gsib_buffer"
-       ]
+       "unknown_components": []
       },
       "scope_evidence_status": "UNKNOWN__NO_PUBLIC_EVIDENCE",
       "scope_official_quote": null,
@@ -2013,6 +2127,8 @@
      "local_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
      "publication_date": "2023-11-01",
      "publisher": "国家金融监督管理总局",
+     "source_hash": "ad8ab5dd3f596f4e7765645963863dd7bcef86165aa162761f73f8e3d4dfac42",
+     "source_hash_file": "audit/codex/CMB_SCORE_MODEL_V4_CODEX_VERSIONED_FINAL_REAUDIT_RC_V10/official_sources/NFRA_1134197.txt",
      "title": "《商业银行资本管理办法》（国家金融监督管理总局令 2023 年第 4 号）",
      "url": "https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectByDocId/data_docId=1134197.json"
     },
@@ -2026,7 +2142,8 @@
     "peer_raw_cet1_median": 9.344999999999999,
     "peer_raw_cet1_percentile": 94.4444,
     "peer_raw_cet1_rank": 1.0,
-    "semantics": "RAW_CET1__SECONDARY_DIAGNOSTIC_ONLY"
+    "semantics": "RAW_CET1__SECONDARY_DIAGNOSTIC_ONLY",
+    "unit": "%"
    },
    "report_period": "2026-06-30",
    "unit": "个百分点"
@@ -2035,7 +2152,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_COMPARABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_COMPARABLE",
+   "direction": null,
    "evidence_strength": "NOT_COMPARABLE",
    "group": "CAPITAL_FUNDING_MOAT",
    "group_zh": "资本与负债护城河",
@@ -2064,7 +2183,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_COMPARABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_COMPARABLE",
+   "direction": null,
    "evidence_strength": "NOT_COMPARABLE",
    "group": "CAPITAL_FUNDING_MOAT",
    "group_zh": "资本与负债护城河",
@@ -2093,7 +2214,9 @@
    "available_from": null,
    "cmb_value": null,
    "comparability_status": "NOT_COMPARABLE",
+   "coverage_pct": null,
    "coverage_status": "NOT_COMPARABLE",
+   "direction": null,
    "evidence_strength": "NOT_COMPARABLE",
    "group": "CAPITAL_FUNDING_MOAT",
    "group_zh": "资本与负债护城河",
@@ -2333,7 +2456,7 @@
   "public_zh": "行业逆风与招行自身弱化共同作用",
   "value": "MIXED_WITH_MATERIAL_CMB_SPECIFIC_WEAKENING"
  },
- "rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
+ "rc_id": "CMB_V4_RELEASE_CANDIDATE_V12",
  "relative_aggregate_gate": {
   "eligible_weight_coverage_pct": 69.7368,
   "relative_quality_index": null,

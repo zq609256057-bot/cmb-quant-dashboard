@@ -32,7 +32,7 @@
    "old_rc_v8_rc_id": "CMB_V4_RELEASE_CANDIDATE_V8",
    "operational_status": "RELEASE_CANDIDATE",
    "overall_score": "FORBIDDEN",
-   "payload_version": "RC_V11_V1",
+   "payload_version": "RC_V12_V1",
    "presentation_truth": {
     "browser_business_recalc_count": 0,
     "forbidden_public_copy_match_count": 0,
@@ -44,7 +44,7 @@
    },
    "production_authority": false,
    "public_visible": true,
-   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
+   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V12",
    "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_FINAL_REAUDIT",
    "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
    "rc_v6_scope": {
@@ -95,7 +95,7 @@
     "CMB_V4_RELEASE_CANDIDATE_V5",
     "CMB_V4_RELEASE_CANDIDATE_V6"
    ],
-   "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V10",
+   "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
    "superseded_rc_status": "HISTORICAL_AUDITED_FAIL",
    "v4_production_authority": false,
    "v4_production_scheduler": "NOT_LOADED",
@@ -114,7 +114,22 @@
    "codex_rc10_gates": "169 PASS / 30 FAIL / 0 PENDING / 1 UNKNOWN",
    "codex_rc10_first_failed_gate": "G050",
    "model_fingerprint_natural_validation": "0 / 3",
-   "rc11_diagnostic_presentation_validation": "0 / 3"
+   "rc11_diagnostic_presentation_validation": "0 / 3",
+   "old_rc_v11_rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
+   "old_rc_v11_payload_version": "RC_V11_V1",
+   "old_rc_v11_status": "HISTORICAL_AUDITED_FAIL",
+   "codex_rc11_result": "FAIL",
+   "codex_rc11_gates": "190 PASS / 30 FAIL / 0 UNKNOWN / 0 PENDING (220 gates)",
+   "codex_rc11_first_failed_gate": "G124",
+   "codex_rc11_full_regression": "FAIL",
+   "rc11_pre_audit_self_claim": "HISTORICAL_PRE_AUDIT_INPUT",
+   "rc11_pre_audit_self_claim_gates": "170 / 170 PASS",
+   "rc10_pre_audit_self_claim": "HISTORICAL_PRE_AUDIT_INPUT",
+   "rc10_pre_audit_self_claim_gates": "100 / 100 PASS",
+   "old_rc_v8_status": "HISTORICAL_SUPERSEDED_BY_ARCH_B_DIAGNOSTIC_LAYER",
+   "model_fingerprint_natural_ledger_reset": false,
+   "rc12_diagnostic_presentation_validation": "0 / 3",
+   "rc10_diagnostic_presentation_validation": "0 / 3"
   },
   {
    "available_sections": [

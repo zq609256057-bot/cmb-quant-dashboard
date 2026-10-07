@@ -53,6 +53,15 @@
     });
   }
 
+  /* RC V12 / F002 —— 诊断载荷走「取文本 + 严格解析」路径，绝不直接用
+     r.json()：重复键必须在 JSON.parse 之前被发现（L01 / L02）。 */
+  function getDiagnosticText(url) {
+    return fetch(url, {cache: "no-cache"}).then(function (r) {
+      if (!r.ok) throw new Error(url + " -> HTTP " + r.status);
+      return r.text();
+    });
+  }
+
   function fill(sel, entries, current) {
     sel.innerHTML = entries.map(function (e) {
       return '<option value="' + e.value + '">' + e.label + "</option>";
@@ -222,19 +231,20 @@
         var withDiag = function () {
           var qd = view.quality_diagnostic;
           if (!qd || !qd.enabled || !qd.payload_file) { return Promise.resolve(); }
-          return getJSON(qd.payload_file).then(function (d) {
-            /* RC V10 / F002 —— 任何校验不通过的载荷一律 Fail Closed：
-               整个诊断模块不可用；正式五柱照常渲染。 */
-            var v = (typeof window.__CMB_VALIDATE_DIAGNOSTIC__ === 'function')
-              ? window.__CMB_VALIDATE_DIAGNOSTIC__(d, view)
-              : {ok: !!(d && typeof d === 'object')};
+          return getDiagnosticText(qd.payload_file).then(function (txt) {
+            /* RC V12 / F002 —— 重复键检测必须发生在 JSON.parse 之前；
+               解析层由 shell.js 的 L01/L02 严格解析器统一负责。 */
+            var v = (typeof window.__CMB_VALIDATE_DIAGNOSTIC_TEXT__ === 'function')
+              ? window.__CMB_VALIDATE_DIAGNOSTIC_TEXT__(txt, true, view)
+              : {ok: false, reason: 'NO_RC12_VALIDATOR'};
             if (!v.ok) {
               view.quality_diagnostic_data = null;
               view.quality_diagnostic_unavailable = true;
               view.quality_diagnostic_reason = v.reason || 'INVALID';
               return;
             }
-            view.quality_diagnostic_data = d;
+            var p = window.__CMB_PARSE_DIAGNOSTIC_PAYLOAD__(txt);
+            view.quality_diagnostic_data = p.value;
             view.quality_diagnostic_unavailable = false;
           }).catch(function () {
             view.quality_diagnostic_data = null;
