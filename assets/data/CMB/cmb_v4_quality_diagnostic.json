@@ -316,7 +316,7 @@
  "diagnostic_architecture": "ARCH_B_ABSOLUTE_PLUS_RELATIVE_REGIME_ATTRIBUTION_DIAGNOSTICS",
  "diagnostic_contract_id": "CMB_V4_QUALITY_DIAGNOSTIC_CONTRACT_V1",
  "diagnostic_contract_sha256": "4bc6c2176118208cb12867d70307e1c0182a088313ed81b291da93d94d373e74",
- "diagnostic_payload_sha256": "364252737264e8e4ad8d23e9f94f76ede20ef089e1f0f2096b577364f823976c",
+ "diagnostic_payload_sha256": "c4f9da9a44d4110f59559b7fe7040fc5d63977232f3e28fc4e65e365308c4793",
  "display_map_diag": {
   "-0.0018842105|0": "-0",
   "-0.0018842105|2": "-0.00",
@@ -765,7 +765,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 1.23
   },
@@ -791,7 +791,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 202.87
   },
@@ -817,7 +817,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 10.72
   },
@@ -843,7 +843,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 1.54
   },
@@ -869,7 +869,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 0.58
   },
@@ -895,7 +895,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T19:37:45.094544+08:00",
+   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
    "unit": "%",
    "value": 7.72
   }
