@@ -853,102 +853,485 @@
   }
 
   /* =====================================================================
-   * RC V10 / F002 —— 诊断载荷完整性 / 身份 / PIT / 一致性校验。
+   * RC V11 / F002 —— Diagnostic Payload 全链路 Fail Closed
+   *   DIAG_VALIDATE_V2 = CANONICAL_IDENTITY + STRICT_SCHEMA
+   *                    + CROSS_FIELD_CONSISTENCY + FAIL_CLOSED
    *
    * 浏览器只做 VALIDATE / FETCH / RENDER / FILTER：
-   *   不重算 peer median、rank、regime、attribution（recalc count = 0）。
-   * 任何一类不合格 -> 整个诊断模块 Fail Closed（显示「数据暂不可用」）。
-   * 正式五柱不受影响（见 renderV4Diagnostic 之外的五柱渲染路径）。
-   *
-   * F002-E —— Stale 定义为「载荷身份 != 当前 Release 预期身份」，
-   *           绝不按「今天 - N 天」的日历年龄判断。
+   *   不重算 peer median、rank、percentile、quartile、coverage、attribution
+   *   （BROWSER_DIAGNOSTIC_BUSINESS_RECALC_COUNT = 0）。
+   * 顶层 / nested / 预期身份 三者任意冲突 -> 整个诊断 UNAVAILABLE，
+   *   不做部分展示、不做自动修正、不做降级显示。
+   * 正式五柱与 Quality 17 成员不受诊断校验影响。
    * ===================================================================== */
+  var DIAG_VALIDATOR_VERSION = 'DIAG_VALIDATE_V2_RC11_F002';
+
+  /* ---- 冻结的合法枚举集合（取自 Diagnostic Contract V1，浏览器不扩展）---- */
+  var DIAG_LEGAL = {
+    metric_ids: ['P01','P02','P03','P04','P05','P06',
+                 'A01','A02','A03','A04','A05','A06',
+                 'F01','F02','F03','F04','D02'],
+    coverage_status: ['SUFFICIENT','INSUFFICIENT_COVERAGE','NOT_APPLICABLE',
+                      'NOT_COMPARABLE','INSUFFICIENT_COMPARABLE_PEERS'],
+    comparability_status: ['COMPARABLE','NOT_APPLICABLE','NOT_COMPARABLE',
+                           'NOT_COMPARABLE__METHOD_UNKNOWN',
+                           'NOT_COMPARABLE__SCOPE_UNKNOWN',
+                           'NOT_COMPARABLE__REQUIREMENT_UNKNOWN'],
+    comparability_detail: ['SAME_DEFINITION','COMPARABLE_WITH_NORMALIZATION',
+                           'COMPARABLE_WITH_METHOD_DISCLOSURE','NOT_APPLICABLE'],
+    moat_status: ['MOAT_WIDENING','MOAT_STABLE','MOAT_NARROWING','UNVERIFIED'],
+    evidence_strength: ['HIGH','MEDIUM','NOT_APPLICABLE','NOT_COMPARABLE'],
+    direction: ['higher','lower'],
+    group: ['PROFITABILITY_OPERATING','ASSET_QUALITY_RISK',
+            'CAPITAL_FUNDING_MOAT','SHAREHOLDER_POLICY'],
+    regime_status: ['PUBLISHED','INSUFFICIENT_COVERAGE'],
+    regime_class: ['STRONG_TAILWIND','TAILWIND','NEUTRAL_MIXED',
+                   'HEADWIND','STRONG_HEADWIND'],
+    relative_aggregate_status: ['PUBLISHED','NOT_PUBLISHED_INSUFFICIENT_COVERAGE',
+                                'SUPPRESSED','SUPPRESSED__INSUFFICIENT_COVERAGE'],
+    admission_status: ['ADMITTED','NOT_ADMITTED_PRE_PUBLICATION'],
+    period_keys: ['SINCE_2021_BASELINE','LAST_3_YEARS','LAST_1_YEAR'],
+    unit: ['%','个百分点','政策分']
+  };
+  var DIAG_ABSOLUTE_QUALITY_MAX = 100;
+  var DIAG_EXPECTED_METRIC_COUNT = 17;
+  var DIAG_STALENESS_RULE = 'PAYLOAD_IDENTITY_MISMATCH__NOT_CALENDAR_AGE';
+  var DIAG_SHA_RE = /^[0-9a-f]{64}$/;
+
+  function _dgNum(x){ return typeof x === 'number' && isFinite(x); }
+  function _dgStr(x){ return typeof x === 'string' && x.length > 0; }
+  function _dgIn(v, set){ return typeof v === 'string' && set.indexOf(v) >= 0; }
+  function _dgNumOrNull(x){
+    return (x === null || x === undefined) ? true : _dgNum(x);
+  }
+  function _dgHas(x){ return x !== undefined && x !== null; }
+  function _dgBad(r){
+    return {ok:false, reason:r, policy:DIAG_VALIDATOR_VERSION};
+  }
+
   function diagValidate(d, view){
     if(!d || typeof d !== 'object' || Array.isArray(d)){
-      return {ok:false, reason:'EMPTY_OR_NOT_OBJECT'};
+      return _dgBad('EMPTY_OR_NOT_OBJECT');
     }
-    var id = d.payload_identity || {};
     var exp = (view && view.quality_diagnostic) || {};
+    var id  = d.payload_identity;
 
-    /* 1. required fields */
+    /* ---------- 1. STRICT_SCHEMA：必需字段 ---------- */
     var REQ = ['schema','payload_identity','model_id','rc_id','model_fingerprint',
-               'as_of','absolute_quality','peer_metrics','banking_regime',
-               'attribution','coverage_metadata','display_map_diag',
-               'diagnostic_contract_id'];
+               'as_of','payload_version','model_contract_version',
+               'diagnostic_contract_id','diagnostic_contract_sha256',
+               'diagnostic_payload_sha256','diagnostic_architecture',
+               'absolute_quality','peer_metrics','banking_regime','attribution',
+               'coverage_metadata','display_map_diag','relative_aggregate_gate',
+               'source_freshness','industry_aggregate_trace','fail_closed',
+               'unverified_metrics'];
     for(var i=0;i<REQ.length;i++){
-      if(d[REQ[i]] === undefined || d[REQ[i]] === null){
-        return {ok:false, reason:'MISSING_FIELD:' + REQ[i]};
+      if(!_dgHas(d[REQ[i]])){ return _dgBad('MISSING_FIELD:' + REQ[i]); }
+    }
+    if(!id || typeof id !== 'object' || Array.isArray(id)){
+      return _dgBad('MISSING_FIELD:payload_identity');
+    }
+    var REQ_ID = ['model_id','model_fingerprint','diagnostic_contract_id',
+                  'schema_version','release_candidate_id','as_of','report_period',
+                  'payload_version','model_contract_version','staleness_rule'];
+    for(var i2=0;i2<REQ_ID.length;i2++){
+      if(!_dgHas(id[REQ_ID[i2]])){
+        return _dgBad('MISSING_IDENTITY_FIELD:' + REQ_ID[i2]);
       }
     }
-    /* 2. payload identity (F002-D) */
-    var CHK = [
-      ['model_id','expected_model_id','MODEL_ID_MISMATCH'],
-      ['model_fingerprint','expected_model_fingerprint','FINGERPRINT_MISMATCH'],
-      ['diagnostic_contract_id','expected_diagnostic_contract_id','DIAGNOSTIC_CONTRACT_ID_MISMATCH'],
-      ['schema_version','expected_diagnostic_schema_version','SCHEMA_VERSION_MISMATCH'],
-      ['release_candidate_id','expected_release_candidate_id','RELEASE_CANDIDATE_ID_MISMATCH'],
-      ['as_of','expected_diagnostic_as_of','STALE_IDENTITY_AS_OF_MISMATCH'],
-      ['report_period','expected_diagnostic_period','STALE_IDENTITY_PERIOD_MISMATCH']
+
+    /* ---------- 2. CANONICAL_IDENTITY：顶层 == nested == 预期 ---------- */
+    var IDENT = [
+      ['model_id','model_id','model_id','expected_model_id','MODEL_ID_MISMATCH'],
+      ['rc_id','rc_id','release_candidate_id','expected_release_candidate_id',
+       'RELEASE_CANDIDATE_ID_MISMATCH'],
+      ['model_fingerprint','model_fingerprint','model_fingerprint',
+       'expected_model_fingerprint','FINGERPRINT_MISMATCH'],
+      ['diagnostic_contract_id','diagnostic_contract_id','diagnostic_contract_id',
+       'expected_diagnostic_contract_id','DIAGNOSTIC_CONTRACT_ID_MISMATCH'],
+      ['schema_version','schema','schema_version',
+       'expected_diagnostic_schema_version','SCHEMA_VERSION_MISMATCH'],
+      ['as_of','as_of','as_of','expected_diagnostic_as_of',
+       'STALE_IDENTITY_AS_OF_MISMATCH'],
+      ['payload_version','payload_version','payload_version',
+       'expected_payload_version','PAYLOAD_VERSION_MISMATCH'],
+      ['model_contract_version','model_contract_version','model_contract_version',
+       'expected_model_contract_version','MODEL_CONTRACT_VERSION_MISMATCH']
     ];
-    for(var j=0;j<CHK.length;j++){
-      var got = id[CHK[j][0]], want = exp[CHK[j][1]];
-      if(want && got !== want){ return {ok:false, reason:CHK[j][2]}; }
+    for(var k=0;k<IDENT.length;k++){
+      var top = d[IDENT[k][1]], nest = id[IDENT[k][2]], want = exp[IDENT[k][3]];
+      var rs = IDENT[k][4];
+      if(!_dgHas(top))  { return _dgBad('MISSING_TOP_LEVEL_IDENTITY:' + rs); }
+      if(!_dgHas(nest)) { return _dgBad('MISSING_NESTED_IDENTITY:' + rs); }
+      /* F002 核心：顶层与 nested 任意冲突 -> 整个诊断不可用 */
+      if(top !== nest){ return _dgBad('TOP_LEVEL_VS_NESTED_IDENTITY_CONFLICT:' + rs); }
+      if(_dgHas(want) && want !== '' && top !== want){ return _dgBad(rs); }
     }
-    /* 3. formal absolute quality must be a real number */
-    var aq = d.absolute_quality || {};
-    if(typeof aq.score !== 'number' || !isFinite(aq.score)){
-      return {ok:false, reason:'ABSOLUTE_QUALITY_NOT_NUMERIC'};
+    if(_dgStr(exp.expected_diagnostic_period) &&
+       id.report_period !== exp.expected_diagnostic_period){
+      return _dgBad('STALE_IDENTITY_PERIOD_MISMATCH');
     }
-    /* 4. peer payload completeness + internal consistency (F002-F) */
+    if(_dgStr(exp.expected_diagnostic_architecture) &&
+       d.diagnostic_architecture !== exp.expected_diagnostic_architecture){
+      return _dgBad('DIAGNOSTIC_ARCHITECTURE_MISMATCH');
+    }
+    if(!DIAG_SHA_RE.test(String(d.diagnostic_contract_sha256))){
+      return _dgBad('DIAGNOSTIC_CONTRACT_SHA_MALFORMED');
+    }
+    if(!DIAG_SHA_RE.test(String(d.diagnostic_payload_sha256))){
+      return _dgBad('DIAGNOSTIC_PAYLOAD_SHA_MALFORMED');
+    }
+    /* 过期判定只比身份，绝不按自然日年龄 */
+    if(id.staleness_rule !== DIAG_STALENESS_RULE){
+      return _dgBad('STALENESS_RULE_MISMATCH');
+    }
+
+    /* ---------- 3. 正式绝对质量（唯一 Quality 100） ---------- */
+    var aq = d.absolute_quality;
+    if(!aq || typeof aq !== 'object' || Array.isArray(aq)){
+      return _dgBad('ABSOLUTE_QUALITY_NOT_OBJECT');
+    }
+    if(!_dgNum(aq.score)){ return _dgBad('ABSOLUTE_QUALITY_NOT_NUMERIC'); }
+    if(aq.score < 0 || aq.score > DIAG_ABSOLUTE_QUALITY_MAX){
+      return _dgBad('ABSOLUTE_QUALITY_OUT_OF_RANGE');
+    }
+    if(aq.max !== DIAG_ABSOLUTE_QUALITY_MAX){
+      return _dgBad('ABSOLUTE_QUALITY_MAX_MISMATCH');
+    }
+    if(aq.role !== 'FORMAL_ABSOLUTE_QUALITY_SCORE'){
+      return _dgBad('ABSOLUTE_QUALITY_ROLE_MISMATCH');
+    }
+
+    /* ---------- 4. 诊断失败不得阻断正式得分 ---------- */
+    var fc = d.fail_closed || {};
+    if(fc.diagnostic_failure_blocks_formal_score !== false){
+      return _dgBad('FAIL_CLOSED_CONTRACT_VIOLATION');
+    }
+
+    /* ---------- 5. coverage_metadata ---------- */
+    var cm = d.coverage_metadata;
+    if(!cm || typeof cm !== 'object' || Array.isArray(cm)){
+      return _dgBad('COVERAGE_METADATA_NOT_OBJECT');
+    }
+    if(!_dgNum(cm.primary_universe_n) || cm.primary_universe_n < 1){
+      return _dgBad('PRIMARY_UNIVERSE_N_INVALID');
+    }
+    var minP = _dgNum(cm.min_peers) ? cm.min_peers : 6;
+    var minC = _dgNum(cm.min_coverage_pct) ? cm.min_coverage_pct : 70;
+    if(!_dgNum(cm.peer_future_leak_count) || cm.peer_future_leak_count !== 0){
+      return _dgBad('PEER_FUTURE_LEAK');
+    }
+    if(!_dgStr(cm.pit_rule) || !_dgStr(cm.same_period_rule)){
+      return _dgBad('PIT_RULE_MISSING');
+    }
+
+    /* ---------- 6. peer_metrics：枚举 / 数值 / 交叉一致性 ---------- */
     var pm = d.peer_metrics;
-    if(!Array.isArray(pm) || !pm.length){
-      return {ok:false, reason:'PEER_METRICS_EMPTY'};
+    if(!Array.isArray(pm) || !pm.length){ return _dgBad('PEER_METRICS_EMPTY'); }
+    if(pm.length !== DIAG_EXPECTED_METRIC_COUNT){
+      return _dgBad('PEER_METRIC_COUNT_MISMATCH');
     }
-    var cm = d.coverage_metadata || {};
-    var minP = (typeof cm.min_peers === 'number') ? cm.min_peers : 6;
-    var minC = (typeof cm.min_coverage_pct === 'number') ? cm.min_coverage_pct : 70;
-    for(var k=0;k<pm.length;k++){
-      var m = pm[k] || {};
-      var suff = (m.coverage_status === 'SUFFICIENT');
-      if(suff){
-        if(m.cmb_value === null || m.cmb_value === undefined ||
-           m.peer_median === null || m.peer_median === undefined ||
-           m.rank === null || m.rank === undefined ||
-           m.percentile === null || m.percentile === undefined){
-          return {ok:false, reason:'PARTIAL_SUFFICIENT_METRIC:' + m.metric_id};
+    var seen = {}, asOf = id.as_of, repP = id.report_period;
+    for(var a=0;a<pm.length;a++){
+      var m = pm[a] || {};
+      var mid = m.metric_id;
+      if(!_dgIn(mid, DIAG_LEGAL.metric_ids)){
+        return _dgBad('ILLEGAL_METRIC_ID:' + String(mid));
+      }
+      if(seen[mid]){ return _dgBad('DUPLICATE_METRIC_ID:' + mid); }
+      seen[mid] = 1;
+      if(!_dgIn(m.coverage_status, DIAG_LEGAL.coverage_status)){
+        return _dgBad('ILLEGAL_COVERAGE_STATUS:' + mid);
+      }
+      if(!_dgIn(m.comparability_status, DIAG_LEGAL.comparability_status)){
+        return _dgBad('ILLEGAL_COMPARABILITY_STATUS:' + mid);
+      }
+      if(_dgHas(m.comparability_detail) &&
+         !_dgIn(m.comparability_detail, DIAG_LEGAL.comparability_detail)){
+        return _dgBad('ILLEGAL_COMPARABILITY_DETAIL:' + mid);
+      }
+      if(!_dgIn(m.moat_status, DIAG_LEGAL.moat_status)){
+        return _dgBad('ILLEGAL_MOAT_STATUS:' + mid);
+      }
+      if(!_dgIn(m.evidence_strength, DIAG_LEGAL.evidence_strength)){
+        return _dgBad('ILLEGAL_EVIDENCE_STRENGTH:' + mid);
+      }
+      if(!_dgIn(m.group, DIAG_LEGAL.group)){
+        return _dgBad('ILLEGAL_GROUP:' + mid);
+      }
+      if(_dgHas(m.direction) && !_dgIn(m.direction, DIAG_LEGAL.direction)){
+        return _dgBad('ILLEGAL_DIRECTION:' + mid);
+      }
+      if(!_dgIn(m.unit, DIAG_LEGAL.unit)){
+        return _dgBad('ILLEGAL_UNIT:' + mid);
+      }
+      /* 同报告期 */
+      if(_dgStr(m.report_period) && m.report_period !== repP){
+        return _dgBad('PEER_REPORT_PERIOD_MISMATCH:' + mid);
+      }
+      /* PIT：不得使用尚未公开的数据 */
+      if(_dgStr(m.available_from) && m.available_from > asOf){
+        return _dgBad('PEER_FUTURE_TRACE:' + mid);
+      }
+      if(_dgStr(m.industry_aggregate_available_from) &&
+         m.industry_aggregate_available_from > asOf){
+        return _dgBad('INDUSTRY_FUTURE_TRACE:' + mid);
+      }
+      /* 数据期不得被当成公开发布日 */
+      if(_dgHas(m.industry_aggregate_data_period) &&
+         _dgHas(m.industry_aggregate_official_publication_date) &&
+         m.industry_aggregate_data_period ===
+           m.industry_aggregate_official_publication_date){
+        return _dgBad('DATA_PERIOD_REUSED_AS_PUBLICATION_DATE:' + mid);
+      }
+      var nv = m.n_valid, cp = m.coverage_pct;
+      if(!_dgNumOrNull(nv)){ return _dgBad('N_VALID_NOT_FINITE:' + mid); }
+      if(!_dgNumOrNull(cp)){ return _dgBad('COVERAGE_PCT_NOT_FINITE:' + mid); }
+      if(_dgNum(nv) && (nv < 0 || nv > cm.primary_universe_n)){
+        return _dgBad('N_VALID_OUT_OF_RANGE:' + mid);
+      }
+      if(_dgNum(cp) && (cp < 0 || cp > 100)){
+        return _dgBad('COVERAGE_PCT_OUT_OF_RANGE:' + mid);
+      }
+      /* coverage 必须与 n_valid / 预期 universe 自洽，禁止宣称满覆盖却缺行 */
+      if(_dgNum(nv) && _dgNum(cp)){
+        var expCp = 100 * nv / cm.primary_universe_n;
+        if(Math.abs(cp - expCp) > 0.5){
+          return _dgBad('COVERAGE_PCT_INCONSISTENT_WITH_N_VALID:' + mid);
         }
-        if(typeof m.n_valid !== 'number' || m.n_valid < minP){
-          return {ok:false, reason:'PEER_COUNT_BELOW_GATE:' + m.metric_id};
+      }
+      if(m.coverage_status === 'SUFFICIENT'){
+        if(!_dgHas(m.cmb_value) || !_dgHas(m.peer_median) ||
+           !_dgHas(m.rank) || !_dgHas(m.percentile)){
+          return _dgBad('PARTIAL_SUFFICIENT_METRIC:' + mid);
         }
-        if(typeof m.coverage_pct !== 'number' || m.coverage_pct < minC){
-          return {ok:false, reason:'COVERAGE_PCT_BELOW_GATE:' + m.metric_id};
+        if(!_dgNum(m.cmb_value) || !_dgNum(m.peer_median)){
+          return _dgBad('SUFFICIENT_VALUE_NOT_FINITE:' + mid);
+        }
+        if(!_dgNum(nv) || nv < minP){
+          return _dgBad('PEER_COUNT_BELOW_GATE:' + mid);
+        }
+        if(!_dgNum(cp) || cp < minC){
+          return _dgBad('COVERAGE_PCT_BELOW_GATE:' + mid);
+        }
+        if(!_dgNum(m.rank) || !_dgNum(m.percentile)){
+          return _dgBad('RANK_OR_PERCENTILE_NOT_NUMERIC:' + mid);
+        }
+        /* rank 上界 = n_valid + 1：排序集合是「n_valid 家同行 + 招商银行」，
+           渲染为「第 rank / n_valid+1」，故合法区间为 [1, n_valid+1]。
+           越界（0 / 负数 / 大于排序集合人数）一律 UNAVAILABLE。 */
+        if(m.rank < 1 || m.rank > nv + 1){
+          return _dgBad('RANK_OUT_OF_RANGE:' + mid);
+        }
+        if(m.percentile < 0 || m.percentile > 100){
+          return _dgBad('PERCENTILE_OUT_OF_RANGE:' + mid);
+        }
+        if(!_dgNumOrNull(m.peer_p25) || !_dgNumOrNull(m.peer_p75)){
+          return _dgBad('QUARTILE_NOT_FINITE:' + mid);
+        }
+        if(_dgNum(m.peer_p25) && m.peer_p25 > m.peer_median + 1e-9){
+          return _dgBad('QUARTILE_ORDER_VIOLATION_P25_GT_MEDIAN:' + mid);
+        }
+        if(_dgNum(m.peer_p75) && m.peer_median > m.peer_p75 + 1e-9){
+          return _dgBad('QUARTILE_ORDER_VIOLATION_MEDIAN_GT_P75:' + mid);
         }
       }else{
-        if(m.rank !== null && m.rank !== undefined){
-          return {ok:false, reason:'RANK_WITHOUT_SUFFICIENT_COVERAGE:' + m.metric_id};
+        /* 不足覆盖 / 不可比 -> 一律不得给出排名统计 */
+        if(_dgHas(m.rank)){
+          return _dgBad('RANK_WITHOUT_SUFFICIENT_COVERAGE:' + mid);
         }
-        if(m.percentile !== null && m.percentile !== undefined){
-          return {ok:false, reason:'PERCENTILE_WITHOUT_SUFFICIENT_COVERAGE:' + m.metric_id};
+        if(_dgHas(m.percentile)){
+          return _dgBad('PERCENTILE_WITHOUT_SUFFICIENT_COVERAGE:' + mid);
+        }
+      }
+      /* 口径与单位必须一致：安全垫用「个百分点」，原始比率用「%」 */
+      if(m.comparison_semantics === 'PUBLIC_REGULATORY_HEADROOM' &&
+         m.unit !== '个百分点'){
+        return _dgBad('HEADROOM_UNIT_MISMATCH:' + mid);
+      }
+      if(m.comparison_semantics === 'RAW_CET1' && m.unit !== '%'){
+        return _dgBad('RAW_CET1_UNIT_MISMATCH:' + mid);
+      }
+    }
+    for(var s=0;s<DIAG_LEGAL.metric_ids.length;s++){
+      if(!seen[DIAG_LEGAL.metric_ids[s]]){
+        return _dgBad('MISSING_PEER_METRIC_ROW:' + DIAG_LEGAL.metric_ids[s]);
+      }
+    }
+
+    /* ---------- 7. relative_aggregate_gate ---------- */
+    var rg = d.relative_aggregate_gate || {};
+    if(!_dgIn(rg.status, DIAG_LEGAL.relative_aggregate_status)){
+      return _dgBad('ILLEGAL_RELATIVE_AGGREGATE_STATUS');
+    }
+    if(rg.threshold_downgraded !== false){
+      return _dgBad('RELATIVE_GATE_THRESHOLD_DOWNGRADED');
+    }
+    if(rg.status === 'PUBLISHED' && !_dgNum(rg.relative_quality_index)){
+      return _dgBad('RELATIVE_INDEX_MISSING_WHILE_PUBLISHED');
+    }
+    if(rg.status !== 'PUBLISHED' && _dgHas(rg.relative_quality_index)){
+      return _dgBad('RELATIVE_INDEX_PRESENT_WHILE_SUPPRESSED');
+    }
+
+    /* ---------- 8. banking_regime ---------- */
+    var br = d.banking_regime || {};
+    if(!_dgStr(br.status)){ return _dgBad('REGIME_STATUS_MISSING'); }
+    if(br.is_formal_score !== false){
+      return _dgBad('REGIME_MUST_NOT_BE_FORMAL_SCORE');
+    }
+    var rms = br.metrics;
+    if(!Array.isArray(rms) || !rms.length){
+      return _dgBad('REGIME_METRICS_EMPTY');
+    }
+    for(var b=0;b<rms.length;b++){
+      var rm = rms[b] || {};
+      if(!_dgIn(rm.metric_id, DIAG_LEGAL.metric_ids)){
+        return _dgBad('ILLEGAL_REGIME_METRIC_ID:' + String(rm.metric_id));
+      }
+      if(!_dgIn(rm.status, DIAG_LEGAL.regime_status)){
+        return _dgBad('ILLEGAL_REGIME_STATUS:' + rm.metric_id);
+      }
+      if(rm.status === 'PUBLISHED' &&
+         !_dgIn(rm.regime_classification, DIAG_LEGAL.regime_class)){
+        return _dgBad('ILLEGAL_REGIME_CLASSIFICATION:' + rm.metric_id);
+      }
+    }
+
+    /* ---------- 9. attribution（成员合法 + 自洽） ---------- */
+    var at = d.attribution || {};
+    var per = at.periods || {};
+    var pk = Object.keys(per);
+    if(!pk.length){ return _dgBad('ATTRIBUTION_PERIODS_EMPTY'); }
+    for(var c=0;c<pk.length;c++){
+      if(DIAG_LEGAL.period_keys.indexOf(pk[c]) < 0){
+        return _dgBad('ILLEGAL_ATTRIBUTION_PERIOD_KEY:' + pk[c]);
+      }
+      var pp = per[pk[c]] || {};
+      if(pp.identity_pass !== true){
+        return _dgBad('ATTRIBUTION_IDENTITY_FAIL:' + pk[c]);
+      }
+      if(!_dgNum(pp.quality_delta)){
+        return _dgBad('ATTRIBUTION_DELTA_NOT_NUMERIC:' + pk[c]);
+      }
+      if(!_dgNum(pp.quality_from) || !_dgNum(pp.quality_to)){
+        return _dgBad('ATTRIBUTION_ANCHOR_NOT_NUMERIC:' + pk[c]);
+      }
+      if(Math.abs((pp.quality_to - pp.quality_from) - pp.quality_delta) > 1e-6){
+        return _dgBad('ATTRIBUTION_DELTA_INCONSISTENT:' + pk[c]);
+      }
+      if(pp.to_date !== asOf){
+        return _dgBad('ATTRIBUTION_TO_DATE_MISMATCH:' + pk[c]);
+      }
+      var md = pp.member_delta || {};
+      var mk = Object.keys(md);
+      if(!mk.length){ return _dgBad('ATTRIBUTION_MEMBER_DELTA_EMPTY:' + pk[c]); }
+      var msum = 0;
+      for(var e=0;e<mk.length;e++){
+        if(DIAG_LEGAL.metric_ids.indexOf(mk[e]) < 0){
+          return _dgBad('ILLEGAL_ATTRIBUTION_MEMBER:' + mk[e]);
+        }
+        if(!_dgNum(md[mk[e]])){
+          return _dgBad('ATTRIBUTION_MEMBER_NOT_NUMERIC:' + mk[e]);
+        }
+        msum += md[mk[e]];
+      }
+      if(Math.abs(msum - pp.quality_delta) > 1e-6){
+        return _dgBad('ATTRIBUTION_MEMBER_SUM_INCONSISTENT:' + pk[c]);
+      }
+    }
+    /* baseline_default 是描述性基准串（含基准日），不是周期键；
+       只要求非空字符串，不得为空 / 非字符串。 */
+    if(!_dgStr(at.baseline_default)){
+      return _dgBad('ATTRIBUTION_BASELINE_DEFAULT_MISSING');
+    }
+    if(at.causal_claim !== false){
+      return _dgBad('ATTRIBUTION_MUST_NOT_CLAIM_CAUSALITY');
+    }
+    var td = at.top_drivers || {};
+    if(td.source !== 'PRECOMPUTED_PAYLOAD'){
+      return _dgBad('ATTRIBUTION_DRIVER_SOURCE_NOT_PRECOMPUTED');
+    }
+    var sides = ['top_negative','top_positive'];
+    for(var sd=0; sd<sides.length; sd++){
+      var arr = td[sides[sd]] || [];
+      for(var f=0;f<arr.length;f++){
+        if(DIAG_LEGAL.metric_ids.indexOf(arr[f].metric_id) < 0){
+          return _dgBad('ILLEGAL_ATTRIBUTION_DRIVER:' + String(arr[f].metric_id));
+        }
+        if(!_dgNum(arr[f].delta_earned_points)){
+          return _dgBad('ATTRIBUTION_DRIVER_NOT_NUMERIC');
         }
       }
     }
-    /* 5. PIT */
-    if(typeof cm.peer_future_leak_count === 'number' && cm.peer_future_leak_count !== 0){
-      return {ok:false, reason:'PEER_FUTURE_LEAK'};
+
+    /* ---------- 10. industry_aggregate_trace（F006 准入） ---------- */
+    var tr = d.industry_aggregate_trace;
+    if(!Array.isArray(tr) || !tr.length){
+      return _dgBad('INDUSTRY_TRACE_EMPTY');
     }
-    /* 6. attribution identity */
-    var per = (d.attribution || {}).periods || {};
-    var keys = Object.keys(per), any = false;
-    for(var q=0;q<keys.length;q++){
-      any = true;
-      if(per[keys[q]].identity_pass !== true){
-        return {ok:false, reason:'ATTRIBUTION_IDENTITY_FAIL'};
+    for(var g=0;g<tr.length;g++){
+      var t = tr[g] || {};
+      if(!_dgIn(t.metric_id, DIAG_LEGAL.metric_ids)){
+        return _dgBad('ILLEGAL_INDUSTRY_TRACE_METRIC:' + String(t.metric_id));
+      }
+      if(!_dgIn(t.admission_status, DIAG_LEGAL.admission_status)){
+        return _dgBad('ILLEGAL_ADMISSION_STATUS:' + t.metric_id);
+      }
+      if(t.period_is_not_available_from !== true){
+        return _dgBad('DATA_PERIOD_REUSED_AS_AVAILABLE_FROM:' + t.metric_id);
+      }
+      if(!_dgStr(t.official_publication_date) || !_dgStr(t.available_from)){
+        return _dgBad('INDUSTRY_PUBLICATION_DATE_MISSING:' + t.metric_id);
+      }
+      if(t.available_from > asOf || t.official_publication_date > asOf){
+        return _dgBad('INDUSTRY_FUTURE_PUBLICATION:' + t.metric_id);
+      }
+      if(t.admission_status !== 'ADMITTED' && _dgHas(t.value)){
+        return _dgBad('PRE_PUBLICATION_VALUE_LEAK:' + t.metric_id);
+      }
+      if(t.pit_admissible === true && t.admission_status !== 'ADMITTED'){
+        return _dgBad('ADMISSION_STATUS_INCONSISTENT:' + t.metric_id);
       }
     }
-    if(!any){ return {ok:false, reason:'ATTRIBUTION_PERIODS_EMPTY'}; }
-    return {ok:true, reason:null};
+
+    /* ---------- 11. source_freshness ---------- */
+    var sf = d.source_freshness || {};
+    if(_dgStr(sf.peer_data_as_of) && sf.peer_data_as_of > asOf){
+      return _dgBad('PEER_DATA_AS_OF_IN_FUTURE');
+    }
+    if(_dgStr(sf.industry_aggregate_available_from) &&
+       sf.industry_aggregate_available_from > asOf){
+      return _dgBad('INDUSTRY_AVAILABLE_FROM_IN_FUTURE');
+    }
+    if(_dgStr(sf.industry_aggregate_official_publication_date) &&
+       sf.industry_aggregate_official_publication_date > asOf){
+      return _dgBad('INDUSTRY_PUBLICATION_IN_FUTURE');
+    }
+    if(_dgHas(sf.industry_aggregate_period) &&
+       sf.industry_aggregate_period === sf.industry_aggregate_available_from){
+      return _dgBad('INDUSTRY_PERIOD_REUSED_AS_AVAILABLE_FROM');
+    }
+
+    /* ---------- 12. unverified_metrics / display_map_diag ---------- */
+    var um = d.unverified_metrics;
+    if(!Array.isArray(um)){ return _dgBad('UNVERIFIED_METRICS_NOT_ARRAY'); }
+    for(var u=0;u<um.length;u++){
+      if(DIAG_LEGAL.metric_ids.indexOf(um[u]) < 0){
+        return _dgBad('ILLEGAL_UNVERIFIED_METRIC:' + String(um[u]));
+      }
+    }
+    var dmp = d.display_map_diag;
+    if(!dmp || typeof dmp !== 'object' || Array.isArray(dmp) ||
+       !Object.keys(dmp).length){
+      return _dgBad('DISPLAY_MAP_EMPTY');
+    }
+
+    return {ok:true, reason:null, policy:DIAG_VALIDATOR_VERSION};
   }
   window.__CMB_VALIDATE_DIAGNOSTIC__ = diagValidate;
+  window.__CMB_DIAG_VALIDATOR_VERSION__ = DIAG_VALIDATOR_VERSION;
+  window.__CMB_DIAG_LEGAL__ = DIAG_LEGAL;
 
   function renderV4Diagnostic(){
     var host1 = document.getElementById('v4-diag-chips');
@@ -1023,30 +1406,56 @@
     (qd.peer_metrics || []).forEach(function(m){
       if(m.metric_id === 'F01') f01 = m;
     });
-    if(f01 && f01.public_regulatory_headroom){
-      var fh = f01.public_regulatory_headroom;
+    if(f01){
+      var fh = f01.public_regulatory_headroom || {};
       var fr = f01.raw_cet1_secondary || {};
+      /* RC V11 / F001 —— 安全垫主口径只有在「可比同行数量 + 覆盖率」都过闸
+         时才发布；否则只公开说明为什么不发布，绝不退回 Raw CET1 冒充主排名，
+         也绝不把 UNKNOWN 口径粉饰成 AVAILABLE。 */
+      var hrOk = (f01.f01_peer_primary_status ===
+                  'PUBLISHED_PUBLIC_REGULATORY_HEADROOM') &&
+                 (fh.cmb_public_headroom !== null &&
+                  fh.cmb_public_headroom !== undefined);
       h.push('<div class="diag-sub">公开监管资本安全垫</div>');
-      h.push('<div class="diag-note">资本安全垫 = 核心一级资本充足率 ' +
-             '减 公开适用监管要求。</div>');
-      h.push('<div class="diag-row diag-head" role="row">' +
-        ['口径', '招商银行', '同行中位数', '同行位置'].map(function(t){
-          return '<span role="columnheader">' + esc(t) + '</span>';
-        }).join('') + '</div>');
-      var fpos = (fh.peer_headroom_rank === null || fh.peer_headroom_rank === undefined)
-        ? GLYPH : ('第 ' + diagNum(fh.peer_headroom_rank, 0) + ' / ' +
-                   diagNum((fh.n_valid || 0) + 1, 0));
-      h.push('<div class="diag-row" role="row">' +
-        '<span>资本安全垫</span>' +
-        '<span>' + diagNum(fh.cmb_public_headroom, 2) + ' 个百分点</span>' +
-        '<span>' + diagNum(fh.peer_headroom_median, 2) + '</span>' +
-        '<span>' + fpos + '</span></div>');
-      h.push('<div class="diag-note">非公开的第二支柱要求与真实总监管要求' +
-             '仍然未知，因此这里比较的是公开口径资本安全垫，' +
-             '不是真实总监管安全垫。</div>');
+      if(hrOk){
+        h.push('<div class="diag-note">资本安全垫 = 核心一级资本充足率 ' +
+               '减 公开适用监管要求，单位为个百分点。</div>');
+        h.push('<div class="diag-row diag-head" role="row">' +
+          ['口径', '招商银行', '同行中位数', '同行位置'].map(function(t){
+            return '<span role="columnheader">' + esc(t) + '</span>';
+          }).join('') + '</div>');
+        var fpos = (fh.peer_headroom_rank === null || fh.peer_headroom_rank === undefined)
+          ? GLYPH : ('第 ' + diagNum(fh.peer_headroom_rank, 0) + ' / ' +
+                     diagNum((fh.n_valid || 0) + 1, 0));
+        h.push('<div class="diag-row" role="row">' +
+          '<span>资本安全垫</span>' +
+          '<span>' + diagNum(fh.cmb_public_headroom, 2) + ' 个百分点</span>' +
+          '<span>' + diagNum(fh.peer_headroom_median, 2) + '</span>' +
+          '<span>' + fpos + '</span></div>');
+        h.push('<div class="diag-note">非公开的第二支柱要求与真实总监管要求' +
+               '仍然未知，因此这里比较的是公开口径资本安全垫，' +
+               '不是真实总监管安全垫。</div>');
+      }else{
+        h.push('<div class="diag-note">' +
+               esc(fh.public_status_zh ||
+                   '部分同行监管口径不可比，本期不提供同行排名') + '</div>');
+        var exl = fh.excluded_peers || [];
+        if(exl.length){
+          h.push('<div class="diag-row diag-wrap">' + exl.map(function(x){
+            return esc(x.bank_name_zh || x.bank) + '（' +
+                   esc(x.reason_zh || '口径不可比') + '）';
+          }).join(' · ') + '</div>');
+        }
+        h.push('<div class="diag-note">不做估算补齐，也不降低可比门槛；' +
+               '因此本期不发布资本安全垫的同行中位数与排名。</div>');
+        h.push('<div class="diag-note">需要说明：非公开的第二支柱要求与真实' +
+               '总监管要求仍然未知，所以即使可比同行足够，这里比较的也只是' +
+               '公开口径资本安全垫，不是真实总监管安全垫。</div>');
+      }
+      /* ---- 原始比率恒为次级参考，单位 %，绝不与安全垫混用同一根轴 ---- */
       h.push('<div class="diag-sub">原始核心一级资本充足率（次级参考）</div>');
       h.push('<div class="diag-note">各行计量方法不同（高级法 / 权重法），' +
-             '原始比率不可直接比较，仅作参考。</div>');
+             '原始比率不可直接比较，也不能替代上面的资本安全垫，仅作参考。</div>');
       h.push('<div class="diag-row" role="row">' +
         '<span>核心一级资本充足率</span>' +
         '<span>' + diagNum(fr.cmb_raw_cet1, 2) + ' %</span>' +
@@ -1055,6 +1464,16 @@
                      fr.peer_raw_cet1_rank === undefined) ? GLYPH :
                     ('第 ' + diagNum(fr.peer_raw_cet1_rank, 0) + ' / ' +
                      diagNum((fr.n_valid || 0) + 1, 0))) + '</span></div>');
+      /* ---- 行业口径：只有能建立真实可适用的行业监管要求栈时才显示安全垫；
+             否则只显示官方原始比率 ---- */
+      h.push('<div class="diag-sub">行业口径</div>');
+      h.push(diagRow([esc(f01.industry_aggregate_label_zh || '商业银行（官方口径）'),
+        (f01.industry_aggregate === null || f01.industry_aggregate === undefined)
+          ? '行业数据在该日期尚未公开'
+          : (diagNum(f01.industry_aggregate, 2) + ' %')]));
+      h.push('<div class="diag-note">' +
+             esc(f01.industry_headroom_note_zh ||
+                 '行业口径只展示官方原始数据，不构造行业资本安全垫。') + '</div>');
     }
 
     var ok = (qd.peer_metrics || []).filter(function(m){

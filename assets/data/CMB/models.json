@@ -32,7 +32,7 @@
    "old_rc_v8_rc_id": "CMB_V4_RELEASE_CANDIDATE_V8",
    "operational_status": "RELEASE_CANDIDATE",
    "overall_score": "FORBIDDEN",
-   "payload_version": "RC_V10_V1",
+   "payload_version": "RC_V11_V1",
    "presentation_truth": {
     "browser_business_recalc_count": 0,
     "forbidden_public_copy_match_count": 0,
@@ -44,7 +44,7 @@
    },
    "production_authority": false,
    "public_visible": true,
-   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V10",
+   "rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
    "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_FINAL_REAUDIT",
    "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
    "rc_v6_scope": {
@@ -95,7 +95,7 @@
     "CMB_V4_RELEASE_CANDIDATE_V5",
     "CMB_V4_RELEASE_CANDIDATE_V6"
    ],
-   "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
+   "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V10",
    "superseded_rc_status": "HISTORICAL_AUDITED_FAIL",
    "v4_production_authority": false,
    "v4_production_scheduler": "NOT_LOADED",
@@ -106,7 +106,15 @@
    },
    "old_rc_v9_rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
    "old_rc_v9_payload_version": "RC_V9_V1",
-   "old_rc_v9_status": "HISTORICAL_AUDITED_FAIL"
+   "old_rc_v9_status": "HISTORICAL_AUDITED_FAIL",
+   "old_rc_v10_rc_id": "CMB_V4_RELEASE_CANDIDATE_V10",
+   "old_rc_v10_payload_version": "RC_V10_V1",
+   "old_rc_v10_status": "HISTORICAL_AUDITED_FAIL",
+   "codex_rc10_result": "FAIL",
+   "codex_rc10_gates": "169 PASS / 30 FAIL / 0 PENDING / 1 UNKNOWN",
+   "codex_rc10_first_failed_gate": "G050",
+   "model_fingerprint_natural_validation": "0 / 3",
+   "rc11_diagnostic_presentation_validation": "0 / 3"
   },
   {
    "available_sections": [
