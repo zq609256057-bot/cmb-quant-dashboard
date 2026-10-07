@@ -223,7 +223,19 @@
           var qd = view.quality_diagnostic;
           if (!qd || !qd.enabled || !qd.payload_file) { return Promise.resolve(); }
           return getJSON(qd.payload_file).then(function (d) {
+            /* RC V10 / F002 —— 任何校验不通过的载荷一律 Fail Closed：
+               整个诊断模块不可用；正式五柱照常渲染。 */
+            var v = (typeof window.__CMB_VALIDATE_DIAGNOSTIC__ === 'function')
+              ? window.__CMB_VALIDATE_DIAGNOSTIC__(d, view)
+              : {ok: !!(d && typeof d === 'object')};
+            if (!v.ok) {
+              view.quality_diagnostic_data = null;
+              view.quality_diagnostic_unavailable = true;
+              view.quality_diagnostic_reason = v.reason || 'INVALID';
+              return;
+            }
             view.quality_diagnostic_data = d;
+            view.quality_diagnostic_unavailable = false;
           }).catch(function () {
             view.quality_diagnostic_data = null;
             view.quality_diagnostic_unavailable = true;

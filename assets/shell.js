@@ -429,6 +429,19 @@
    * 不为这三个区域新建任何配色体系；比例 = score/100 = earned/max（Python 算好）。
    * 浏览器只渲染，绝不重算业务分（PART G）。
    * ==================================================================== */
+  /* RC V10 / F004 —— freshness 状态是内部枚举，绝不直接出给用户。
+     只显示简短中文用户语义；未知/空值一律不渲染，不留空芯片。 */
+  var FRESHNESS_ZH = {
+    'CURRENT_LATEST_ELIGIBLE': '当前可用',
+    'CURRENT_BY_DISCLOSURE_CADENCE': '按披露节奏为最新',
+    'STALE_NEWER_DISCLOSURE_AVAILABLE': '已有更新披露未计入',
+    'NOT_AVAILABLE': '暂不可用'
+  };
+  function freshnessZh(s){
+    var t = FRESHNESS_ZH[s];
+    return (t === undefined) ? '' : t;
+  }
+
   function v4ComponentRows(b){
     var comps = (b && b.components) || [];
     if(!comps.length) return '';
@@ -457,7 +470,8 @@
         '<div class="score-row-meta">' +
           '<span class="raw">实际得分 ' + esc(c.earned_points_display || GLYPH) +
             ' / ' + esc(c.max_points_display || GLYPH) + '</span>' +
-          '<span>' + esc(c.freshness_status || '') + '</span>' +
+          /* F004 —— 不再输出 CURRENT_LATEST_ELIGIBLE 等工程枚举 */
+          '<span>' + esc(freshnessZh(c.freshness_status)) + '</span>' +
         '</div>' +
         (c.explanation ? '<div class="mod-partial">' + esc(c.explanation) + '</div>' : '') +
         '</div>';
@@ -738,10 +752,11 @@
         h.push('<div class="score-row"><div class="score-row-head">' +
           '<span class="score-row-label">10 年期国债收益率</span>' +
           '<span class="score-row-score">' + esc(b.cn10y.raw_pp_display) + '</span></div>' +
-          '<div class="score-row-meta"><span class="raw">as of ' +
-          esc(b.cn10y.asof || GLYPH) + '</span><span>staleness ' +
+          /* F004 —— "as of / staleness" 工程英文改为中文用户文案 */
+          '<div class="score-row-meta"><span class="raw">数据日期 ' +
+          esc(b.cn10y.asof || GLYPH) + '</span><span>数据时效：距最新数据 ' +
           esc(b.cn10y.staleness_td === null ? GLYPH : b.cn10y.staleness_td) +
-          ' 交易日</span></div>' +
+          ' 个交易日</span></div>' +
           '<div class="mod-partial">' + esc(b.cn10y.saturation_note_zh || '') +
           '</div></div>');
       }
@@ -837,14 +852,116 @@
     }).join('') + '</div>';
   }
 
+  /* =====================================================================
+   * RC V10 / F002 —— 诊断载荷完整性 / 身份 / PIT / 一致性校验。
+   *
+   * 浏览器只做 VALIDATE / FETCH / RENDER / FILTER：
+   *   不重算 peer median、rank、regime、attribution（recalc count = 0）。
+   * 任何一类不合格 -> 整个诊断模块 Fail Closed（显示「数据暂不可用」）。
+   * 正式五柱不受影响（见 renderV4Diagnostic 之外的五柱渲染路径）。
+   *
+   * F002-E —— Stale 定义为「载荷身份 != 当前 Release 预期身份」，
+   *           绝不按「今天 - N 天」的日历年龄判断。
+   * ===================================================================== */
+  function diagValidate(d, view){
+    if(!d || typeof d !== 'object' || Array.isArray(d)){
+      return {ok:false, reason:'EMPTY_OR_NOT_OBJECT'};
+    }
+    var id = d.payload_identity || {};
+    var exp = (view && view.quality_diagnostic) || {};
+
+    /* 1. required fields */
+    var REQ = ['schema','payload_identity','model_id','rc_id','model_fingerprint',
+               'as_of','absolute_quality','peer_metrics','banking_regime',
+               'attribution','coverage_metadata','display_map_diag',
+               'diagnostic_contract_id'];
+    for(var i=0;i<REQ.length;i++){
+      if(d[REQ[i]] === undefined || d[REQ[i]] === null){
+        return {ok:false, reason:'MISSING_FIELD:' + REQ[i]};
+      }
+    }
+    /* 2. payload identity (F002-D) */
+    var CHK = [
+      ['model_id','expected_model_id','MODEL_ID_MISMATCH'],
+      ['model_fingerprint','expected_model_fingerprint','FINGERPRINT_MISMATCH'],
+      ['diagnostic_contract_id','expected_diagnostic_contract_id','DIAGNOSTIC_CONTRACT_ID_MISMATCH'],
+      ['schema_version','expected_diagnostic_schema_version','SCHEMA_VERSION_MISMATCH'],
+      ['release_candidate_id','expected_release_candidate_id','RELEASE_CANDIDATE_ID_MISMATCH'],
+      ['as_of','expected_diagnostic_as_of','STALE_IDENTITY_AS_OF_MISMATCH'],
+      ['report_period','expected_diagnostic_period','STALE_IDENTITY_PERIOD_MISMATCH']
+    ];
+    for(var j=0;j<CHK.length;j++){
+      var got = id[CHK[j][0]], want = exp[CHK[j][1]];
+      if(want && got !== want){ return {ok:false, reason:CHK[j][2]}; }
+    }
+    /* 3. formal absolute quality must be a real number */
+    var aq = d.absolute_quality || {};
+    if(typeof aq.score !== 'number' || !isFinite(aq.score)){
+      return {ok:false, reason:'ABSOLUTE_QUALITY_NOT_NUMERIC'};
+    }
+    /* 4. peer payload completeness + internal consistency (F002-F) */
+    var pm = d.peer_metrics;
+    if(!Array.isArray(pm) || !pm.length){
+      return {ok:false, reason:'PEER_METRICS_EMPTY'};
+    }
+    var cm = d.coverage_metadata || {};
+    var minP = (typeof cm.min_peers === 'number') ? cm.min_peers : 6;
+    var minC = (typeof cm.min_coverage_pct === 'number') ? cm.min_coverage_pct : 70;
+    for(var k=0;k<pm.length;k++){
+      var m = pm[k] || {};
+      var suff = (m.coverage_status === 'SUFFICIENT');
+      if(suff){
+        if(m.cmb_value === null || m.cmb_value === undefined ||
+           m.peer_median === null || m.peer_median === undefined ||
+           m.rank === null || m.rank === undefined ||
+           m.percentile === null || m.percentile === undefined){
+          return {ok:false, reason:'PARTIAL_SUFFICIENT_METRIC:' + m.metric_id};
+        }
+        if(typeof m.n_valid !== 'number' || m.n_valid < minP){
+          return {ok:false, reason:'PEER_COUNT_BELOW_GATE:' + m.metric_id};
+        }
+        if(typeof m.coverage_pct !== 'number' || m.coverage_pct < minC){
+          return {ok:false, reason:'COVERAGE_PCT_BELOW_GATE:' + m.metric_id};
+        }
+      }else{
+        if(m.rank !== null && m.rank !== undefined){
+          return {ok:false, reason:'RANK_WITHOUT_SUFFICIENT_COVERAGE:' + m.metric_id};
+        }
+        if(m.percentile !== null && m.percentile !== undefined){
+          return {ok:false, reason:'PERCENTILE_WITHOUT_SUFFICIENT_COVERAGE:' + m.metric_id};
+        }
+      }
+    }
+    /* 5. PIT */
+    if(typeof cm.peer_future_leak_count === 'number' && cm.peer_future_leak_count !== 0){
+      return {ok:false, reason:'PEER_FUTURE_LEAK'};
+    }
+    /* 6. attribution identity */
+    var per = (d.attribution || {}).periods || {};
+    var keys = Object.keys(per), any = false;
+    for(var q=0;q<keys.length;q++){
+      any = true;
+      if(per[keys[q]].identity_pass !== true){
+        return {ok:false, reason:'ATTRIBUTION_IDENTITY_FAIL'};
+      }
+    }
+    if(!any){ return {ok:false, reason:'ATTRIBUTION_PERIODS_EMPTY'}; }
+    return {ok:true, reason:null};
+  }
+  window.__CMB_VALIDATE_DIAGNOSTIC__ = diagValidate;
+
   function renderV4Diagnostic(){
-    var qd = DATA && DATA.quality_diagnostic_data;
     var host1 = document.getElementById('v4-diag-chips');
     var host2 = document.getElementById('v4-diag-detail');
     if(!host1 || !host2) return;
     diagLoadMap();
+    /* F002 —— 渲染前防御性复校（只校验，不重算） */
+    var _vd = window.__CMB_VALIDATE_DIAGNOSTIC__
+      ? window.__CMB_VALIDATE_DIAGNOSTIC__(DATA && DATA.quality_diagnostic_data, DATA)
+      : {ok: !!(DATA && DATA.quality_diagnostic_data)};
+    var qd = _vd.ok ? DATA.quality_diagnostic_data : null;
 
-    /* ---- Fail-Closed（PART AK / PART AL）---- */
+    /* ---- Fail-Closed（PART AK / PART AL / F002-G）---- */
     if(!qd){
       host1.innerHTML = diagChip('质量诊断', '数据暂不可用');
       host2.innerHTML = '';
@@ -900,6 +1017,46 @@
     h.push('<details class="diag-d"><summary>② 同行比较</summary>');
     h.push('<div class="diag-note">比较对象为 8 家全国性股份制商业银行；' +
            '招商银行不参与同行中位数计算。</div>');
+
+    /* ---- F001-J —— F01 主口径 = 公开监管资本安全垫 -------------------- */
+    var f01 = null;
+    (qd.peer_metrics || []).forEach(function(m){
+      if(m.metric_id === 'F01') f01 = m;
+    });
+    if(f01 && f01.public_regulatory_headroom){
+      var fh = f01.public_regulatory_headroom;
+      var fr = f01.raw_cet1_secondary || {};
+      h.push('<div class="diag-sub">公开监管资本安全垫</div>');
+      h.push('<div class="diag-note">资本安全垫 = 核心一级资本充足率 ' +
+             '减 公开适用监管要求。</div>');
+      h.push('<div class="diag-row diag-head" role="row">' +
+        ['口径', '招商银行', '同行中位数', '同行位置'].map(function(t){
+          return '<span role="columnheader">' + esc(t) + '</span>';
+        }).join('') + '</div>');
+      var fpos = (fh.peer_headroom_rank === null || fh.peer_headroom_rank === undefined)
+        ? GLYPH : ('第 ' + diagNum(fh.peer_headroom_rank, 0) + ' / ' +
+                   diagNum((fh.n_valid || 0) + 1, 0));
+      h.push('<div class="diag-row" role="row">' +
+        '<span>资本安全垫</span>' +
+        '<span>' + diagNum(fh.cmb_public_headroom, 2) + ' 个百分点</span>' +
+        '<span>' + diagNum(fh.peer_headroom_median, 2) + '</span>' +
+        '<span>' + fpos + '</span></div>');
+      h.push('<div class="diag-note">非公开的第二支柱要求与真实总监管要求' +
+             '仍然未知，因此这里比较的是公开口径资本安全垫，' +
+             '不是真实总监管安全垫。</div>');
+      h.push('<div class="diag-sub">原始核心一级资本充足率（次级参考）</div>');
+      h.push('<div class="diag-note">各行计量方法不同（高级法 / 权重法），' +
+             '原始比率不可直接比较，仅作参考。</div>');
+      h.push('<div class="diag-row" role="row">' +
+        '<span>核心一级资本充足率</span>' +
+        '<span>' + diagNum(fr.cmb_raw_cet1, 2) + ' %</span>' +
+        '<span>' + diagNum(fr.peer_raw_cet1_median, 2) + '</span>' +
+        '<span>' + ((fr.peer_raw_cet1_rank === null ||
+                     fr.peer_raw_cet1_rank === undefined) ? GLYPH :
+                    ('第 ' + diagNum(fr.peer_raw_cet1_rank, 0) + ' / ' +
+                     diagNum((fr.n_valid || 0) + 1, 0))) + '</span></div>');
+    }
+
     var ok = (qd.peer_metrics || []).filter(function(m){
       return m.coverage_status === 'SUFFICIENT';
     });
