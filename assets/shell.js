@@ -187,6 +187,12 @@
       notice('');
     }
     cur = target;
+    /* ISSUE-07 —— 全局交易日切换时，④ 的定位锚点跟着走，保证全页只有一个
+       selectedTradingDate；用户在 ④ 里单独定位则只改 ④ 的锚点。 */
+    if(ISV4){
+      V4_SEL = target;
+      if(el('v4-single-date')) el('v4-single-date').value = target;
+    }
     syncDateControls(target);
     render(target);
     drawAll(target);
@@ -305,6 +311,1761 @@
       return h.join('');
     }).join('');
   }
+  /* ================= CMB_SCORE_MODEL_V4 —— 五柱独立评分渲染 =============
+   * 只在 model_id = CMB_SCORE_MODEL_V4 时启用；V2 / V3 走原来的 hero / 模块 /
+   * 共振 / 阈值路径，一行代码都不改（视觉母版 MODEL_V2_FRONTEND_V6）。
+   * 五柱各自 0~100、同图共享 0~100 纵轴；不存在第六个综合分。
+   * 展示字符串一律查 display_map（Python Decimal ROUND_HALF_UP 预计算），
+   * 浏览器不格式化任何业务数字。 */
+  var ISV4 = false;
+  var V4P = [], V4M = {}, V4RANGE = null;
+  /* 五柱曲线色板 + 价格曲线沿用本项目既有的价格色（PRICE_COLOR #d97706）。
+     R2 配色决定：价格位置 = 红色 #dc2626，宏观估值环境 = 黑色 #000000，
+     其余三柱保持既有色，六条线仍互不撞色。 */
+  var V4_COLORS = ['#7c3aed', '#2563eb', '#dc2626', '#059669', '#000000'];
+  var V4_QFQ_COLOR = '#d97706';
+  var V4_SM = [];                 /* series_meta（五柱 + QFQ_CLOSE） */
+  var V4_AXIS = {}, V4_EARLIEST = {}, V4_BAND = {};
+  /* ISSUE-05 —— 方形复选图例的勾选状态：Fresh Page 恒为「全部未选」。
+     不写 localStorage、不读 localStorage、不存 sessionStorage；
+     刷新页面 / 切换模型后一律回到全未选（D06）。 */
+  var V4_CHK = {};
+  var V4_LG_BUILT = false;   /* 图例 DOM 只在每次 boot 构建一次（避免连点失效） */
+  /* ISSUE-07 —— ④ 的唯一交易日锚点：selectedTradingDate。
+     曲线、图例、十字线、Tooltip 全部围绕它取值，绝不各算一套日期索引。 */
+  var V4_SEL = null;
+  var V4_HOVER = null;
+  /* ⑦ 样本置信度中文标签（J10）—— 只做标签翻译，不做任何数值加工。 */
+  var CONF_CN = {RELATIVELY_SUFFICIENT: '样本相对充足', SUFFICIENT: '样本充足',
+                 CAUTION: '样本偏少 · 谨慎参考', LIMITED: '样本有限',
+                 LOW_SAMPLE: '样本不足', INSUFFICIENT: '样本不足',
+                 NO_MATURE_SAMPLE: '无成熟样本'};
+  /* V2 / V3 专属 section（按 data-section 标识）：V4 下整段隐藏。 */
+  var V23_SECTIONS = ['D_HERO_CORE', 'F_CORE', 'E_FORWARD_OVERLAY',
+                      'D_HERO_INVESTMENT', 'G_INVESTMENT', 'J_COMPREHENSIVE',
+                      'K_RESONANCE', 'H_HISTORY', 'I_DYNAMIC',
+                      'L_THRESHOLD_RETURN'];
+
+  function applyModelSections(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-v4]'),
+      function(n){ n.hidden = !ISV4; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-section]'),
+      function(n){
+        if(V23_SECTIONS.indexOf(n.getAttribute('data-section')) >= 0) n.hidden = ISV4;
+      });
+  }
+
+  /* PART F —— 单日定位：回退到不晚于该日的最近交易日（previous-or-equal）。
+     master 交易日轴是唯一真相，绝不按数组下标猜。 */
+  function prevTradingDate(iso){
+    if(!iso || !dates.length) return null;
+    var lo = 0, hi = dates.length - 1, ans = null;
+    while(lo <= hi){
+      var mid = (lo + hi) >> 1;
+      if(dates[mid] <= iso){ ans = dates[mid]; lo = mid + 1; }
+      else { hi = mid - 1; }
+    }
+    return ans;
+  }
+
+  /* RC V3 / F008 —— 区间起点：next-or-equal。
+     冻结规则（三条，语义各不相同，禁止互相复用）：
+       Single Date : previous-or-equal
+       Range Start : next-or-equal      （Resolved Start 必须 >= From）
+       Range End   : previous-or-equal  （Resolved End   必须 <= To）
+     例：From = 2013-07-13（周六）→ Resolved Start = 2013-07-15（周一），
+     绝不能回退成 2013-07-12。 */
+  function nextTradingDate(iso){
+    if(!iso || !dates.length) return null;
+    var lo = 0, hi = dates.length - 1, ans = null;
+    while(lo <= hi){
+      var mid = (lo + hi) >> 1;
+      if(dates[mid] >= iso){ ans = dates[mid]; hi = mid - 1; }
+      else { lo = mid + 1; }
+    }
+    return ans;
+  }
+
+  function v4FieldOf(key){
+    if(key === 'QFQ_CLOSE') return 'qfq_close';
+    for(var i = 0; i < V4P.length; i++){
+      if(V4P[i].pillar === key) return V4P[i].output_field;
+    }
+    return null;
+  }
+  function v4ColorOf(key){
+    if(key === 'QFQ_CLOSE') return V4_QFQ_COLOR;
+    for(var i = 0; i < V4P.length; i++){
+      if(V4P[i].pillar === key) return V4_COLORS[i % V4_COLORS.length];
+    }
+    return '#9ca3af';
+  }
+  /* 序列取值一律「日期键取值」：master 轴下标 -> hist_series 同一下标。
+     G02 —— 绝不按数组位置对齐两条不同长度的序列。 */
+  function v4ValueAt(key, date){
+    var i = dates.indexOf(date);
+    if(i < 0) return null;
+    var f = v4FieldOf(key);
+    var arr = (f && H[f]) ? H[f] : [];
+    var v = arr[i];
+    return (v === undefined) ? null : v;
+  }
+
+  function v4RawText(pillar, id, raw){
+    if(raw === null || raw === undefined) return GLYPH;
+    var meta = (V4M[pillar] || {})[id] || {};
+    var u = meta.unit;
+    return (u === 'pp' || u === 'ratio') ? pct(raw) : fmt(raw, 4);
+  }
+  function v4RawLabel(pillar, id){
+    return ((V4M[pillar] || {})[id] || {}).raw_label || '原始值';
+  }
+
+  /* ================= RC V5 / PART F + PART G + PART W =================
+   * Valuation / Price Location / Market Confirmation 的每个组成指标，
+   * 现在与 Quality 的单项指标一样拥有自己的：
+   *   Raw Value + 数据日期 / 标准化分 0~100 / 权重 / 实际得分 / 满分 / 进度条
+   * 进度条复用 Quality 现有的 Visual Golden · Score Color Engine，
+   * 不为这三个区域新建任何配色体系；比例 = score/100 = earned/max（Python 算好）。
+   * 浏览器只渲染，绝不重算业务分（PART G）。
+   * ==================================================================== */
+  /* RC V10 / F004 —— freshness 状态是内部枚举，绝不直接出给用户。
+     只显示简短中文用户语义；未知/空值一律不渲染，不留空芯片。 */
+  var FRESHNESS_ZH = {
+    'CURRENT_LATEST_ELIGIBLE': '当前可用',
+    'CURRENT_BY_DISCLOSURE_CADENCE': '按披露节奏为最新',
+    'STALE_NEWER_DISCLOSURE_AVAILABLE': '已有更新披露未计入',
+    'NOT_AVAILABLE': '暂不可用'
+  };
+  function freshnessZh(s){
+    var t = FRESHNESS_ZH[s];
+    return (t === undefined) ? '' : t;
+  }
+
+  function v4ComponentRows(b){
+    var comps = (b && b.components) || [];
+    if(!comps.length) return '';
+    return '<div class="mod-metrics mod-components">' + comps.map(function(c){
+      var ns = c.normalized_score;
+      var has = (ns !== null && ns !== undefined);
+      var tone = has ? toneOf(ns, 100, 'FULLY_AVAILABLE') : 'unavailable';
+      var rawTxt = (c.raw_value_display === undefined || c.raw_value_display === null)
+        ? GLYPH : c.raw_value_display;
+      /* PART H —— 与 Quality 一致：Raw Value 后面永远带数据所属日期 */
+      var rawDate = c.raw_value_date ? (' · ' + c.raw_value_date) : '';
+      return '<div class="score-row score-row-component" data-component="' +
+        esc(c.component_id || '') + '">' +
+        '<div class="score-row-head"><span class="score-row-label">' +
+          esc(c.display_name || c.component_id || '') + '</span>' +
+          '<span class="score-row-score ' + toneTextCls(tone) + '">' +
+          (has ? (c.normalized_score_display || fmt(ns, 2)) : GLYPH) + ' / 100</span></div>' +
+        /* PART G —— 进度条只表示标准化分（等价于 实际得分/满分），
+           绝不由 Raw Value 直接生成。 */
+        '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+          (has ? barWidth(ns, 100).toFixed(2) : 0) + '%"></i></div>' +
+        '<div class="score-row-meta">' +
+          '<span class="raw">原始值 ' + esc(rawTxt) + esc(rawDate) + '</span>' +
+          '<span class="raw">权重 ' + esc(c.weight_display || GLYPH) + '</span>' +
+        '</div>' +
+        '<div class="score-row-meta">' +
+          '<span class="raw">实际得分 ' + esc(c.earned_points_display || GLYPH) +
+            ' / ' + esc(c.max_points_display || GLYPH) + '</span>' +
+          /* F004 —— 不再输出 CURRENT_LATEST_ELIGIBLE 等工程枚举 */
+          '<span>' + esc(freshnessZh(c.freshness_status)) + '</span>' +
+        '</div>' +
+        (c.explanation ? '<div class="mod-partial">' + esc(c.explanation) + '</div>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* PART H / PART AA —— Quality 每个成员在 Raw Value 后显示数据所属日期 */
+  function v4QualityDateSuffix(b, id){
+    var md = (b && b.member_dates) || {};
+    var m = md[id];
+    if(!m || !m.raw_value_date) return '';
+    return ' · ' + m.raw_value_date;
+  }
+  /* PART H —— 内部新鲜度枚举与 canonical_source 属工程说明，不再渲染；
+     Quality 成员的 Raw Value 日期（v4QualityDateSuffix）继续保留。 */
+
+  function v4SeriesList(){
+    return V4_SM.map(function(sm){
+      var f = v4FieldOf(sm.key);
+      var vals = (f && H[f]) ? H[f] : [];
+      var right = (sm.axis === 'RIGHT');
+      return {key: sm.key, name: sm.label_zh, color: v4ColorOf(sm.key),
+              axis: right ? 'right' : 'left', money: right, unit: sm.unit,
+              data: vals.slice()};
+    });
+  }
+  /* D05 —— 只有勾选的序列才画；Fresh Page 全未选，因此初始不画任何曲线。 */
+  function v4Shown(){
+    return v4SeriesList().filter(function(s){ return V4_CHK[s.key] === true; });
+  }
+
+  /* ISSUE-05 —— 方形复选图例：<input type="checkbox"> 本身就是方形控件，
+     沿用 .chart-legend 的排版与字号，不引入新的设计体系。 */
+  function v4Legend(){
+    var host = el('v4-chart-legend');
+    if(!host) return;
+    if(!V4_LG_BUILT){
+      host.innerHTML = V4_SM.map(function(sm){
+        var axisZh = (sm.axis === 'RIGHT') ? ('右轴 ' + sm.unit) : ('左轴 ' + sm.unit);
+        return '<label class="lg-chk" data-v4k="' + esc(sm.key) + '">' +
+          '<input type="checkbox" data-v4s="' + esc(sm.key) + '">' +
+          '<i style="background:' + v4ColorOf(sm.key) + '"></i>' +
+          '<span class="lg-name">' + esc(sm.label_zh) + '</span>' +
+          '<span class="lg-axis">' + esc(axisZh) + '</span>' +
+          '<span class="lg-val">' + GLYPH + '</span></label>';
+      }).join('');
+      Array.prototype.slice.call(host.querySelectorAll('input[data-v4s]'))
+        .forEach(function(cb){
+          cb.addEventListener('change', function(){
+            V4_CHK[cb.getAttribute('data-v4s')] = cb.checked;
+            if(cur) drawV4(cur);
+          });
+        });
+      V4_LG_BUILT = true;
+    }
+    /* 只更新「当前定位交易日下的取值」与勾选态，绝不重建 DOM：
+       重建会把正在被点击的 input 换掉，导致连点只生效第一个。 */
+    Array.prototype.slice.call(host.querySelectorAll('.lg-chk'))
+      .forEach(function(lb){
+        var key = lb.getAttribute('data-v4k') || '';
+        var on = V4_CHK[key] === true;
+        var cb = lb.querySelector('input[type=checkbox]');
+        if(cb && cb.checked !== on) cb.checked = on;
+        if(on){ lb.classList.add('on'); } else { lb.classList.remove('on'); }
+        var v = v4ValueAt(key, V4_SEL);
+        var sv = lb.querySelector('.lg-val');
+        if(sv){
+          sv.textContent = (v === null || v === undefined) ? GLYPH
+                         : (key === 'QFQ_CLOSE' ? ('¥ ' + fmt(v, 2)) : fmt(v, 2));
+        }
+      });
+  }
+
+  function v4SetNote(msg){
+    var n = el('v4-range-note');
+    if(!n) return;
+    n.hidden = !msg;
+    n.textContent = msg || '';
+  }
+  function v4RangeStatus(){
+    var s = el('v4-range-status');
+    if(!s) return;
+    var rs = V4RANGE || {s: 0, e: dates.length - 1};
+    var parts = ['区间 ' + (dates[rs.s] || GLYPH) + ' ~ ' + (dates[rs.e] || GLYPH) +
+                 ' · ' + (rs.e - rs.s + 1) + ' 个交易日'];
+    V4_SM.forEach(function(sm){
+      var ek = (sm.key === 'QFQ_CLOSE') ? 'QFQ_CLOSE_EARLIEST_DATE'
+                                        : (sm.key + '_EARLIEST_LEGAL_DATE');
+      parts.push(sm.label_zh + ' 起 ' + (V4_EARLIEST[ek] || GLYPH));
+    });
+    s.textContent = parts.join(' · ');
+  }
+  function v4HoverStatus(){
+    var hs = el('v4-hover-status');
+    if(!hs) return;
+    hs.textContent = '定位交易日 ' + (V4_SEL || GLYPH) +
+      (V4_HOVER ? ' · 十字线交易日 ' + V4_HOVER : ' · 十字线未悬停');
+  }
+
+  /* ISSUE-06 —— 单日定位：非交易日显式回退并提示，绝不静默换日。 */
+  function v4Locate(){
+    var v = (el('v4-single-date') || {}).value || '';
+    if(!v){ v4SetNote('请先选择要定位的日期。'); return; }
+    var t = prevTradingDate(v);
+    if(!t){ v4SetNote(v + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    V4_SEL = t;
+    v4SetNote((t === v) ? ('已定位到交易日 ' + t + '。')
+                        : (v + ' 不是交易日，已回退到不晚于该日的最近交易日 ' + t + '。'));
+    if(cur) drawV4(cur);
+  }
+  /* ISSUE-06 —— 区间选择：from / to 各自回退；from > to 显式报错，
+     绝不静默反转（G06：静默反转会把「用户填反了」这件事藏起来）。 */
+  function v4ApplyRange(){
+    var a = (el('v4-hist-start') || {}).value || '';
+    var b = (el('v4-hist-end') || {}).value || '';
+    if(!a || !b){ v4SetNote('请同时填写区间开始与区间结束。'); return; }
+    /* RC V3 / F008 —— 开始 next-or-equal，结束 previous-or-equal。 */
+    var ta = nextTradingDate(a), tb = prevTradingDate(b);
+    if(!ta){ v4SetNote(a + ' 晚于最新交易日 ' + (dates[dates.length-1] || GLYPH) +
+                       '，区间内没有任何交易日。'); return; }
+    if(!tb){ v4SetNote(b + ' 早于最早交易日 ' + (dates[0] || GLYPH) + '，无法定位。'); return; }
+    if(ta > tb){
+      /* 空区间显式校验：绝不偷偷交换 Start / End（G06）。 */
+      v4SetNote('空区间校验失败：解析后开始（' + ta + '）晚于结束（' + tb +
+                '），该区间内不存在交易日。已显式报错，不做静默反转，请修正后再应用。');
+      V4RANGE = null;
+      if(cur) drawV4(cur);
+      return;
+    }
+    V4RANGE = {s: dates.indexOf(ta), e: dates.indexOf(tb)};
+    var msg = [];
+    if(ta !== a) msg.push(a + ' → ' + ta);
+    if(tb !== b) msg.push(b + ' → ' + tb);
+    msg.push('区间已应用。');
+    v4SetNote(msg.join('；'));
+    if(cur) drawV4(cur);
+  }
+  function v4ResetRange(){
+    V4RANGE = null;
+    v4SetNote('');
+    if(cur) drawV4(cur);
+  }
+
+  /* ---------- ⑥ 综合研判（I01..I10） ---------- */
+  function renderV4Judgment(d){
+    var jd = ((days[d] || {}).judgment) || {};
+    var ul = function(arr){
+      return (arr && arr.length)
+        ? arr.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('')
+        : '<li>' + GLYPH + '</li>';
+    };
+    var pe = el('v4-j-pos'), ne = el('v4-j-neg'), ce = el('v4-j-concl');
+    if(pe) pe.innerHTML = ul(jd.positive);
+    if(ne) ne.innerHTML = ul(jd.negative);
+    if(ce) ce.textContent = jd.conclusion || GLYPH;
+    /* G11 —— 「生成方式 / 运行期大模型调用 / 契约 ID / 不含买卖建议」等
+       工程与治理说明不再作为 Current User-visible 文案输出。
+       内部事实（LLM_RUNTIME_CALLS = 0 / OVERALL_SCORE = FORBIDDEN /
+       BUY_SELL_ADVICE = 0）仍然成立，只是不再向 Public User 展示。 */
+  }
+
+  /* ---------- ⑦ 评分区间收益验证（PART A ~ PART K） ----------
+   * 互斥 Score Band：两个维度完全同一套 10 个区间
+   *   0-10 / 11-20 / ... / 91-100（[0,10] (10,20] ... (90,100]，完整精度）
+   * 全部由 Python（rc7_band.py + rc7_payload.py）预计算落盘，
+   * 浏览器只做 render，一律取 *_display 字符串，
+   * 绝不自己分组、算收益 / 中位 / 胜率 / 回撤（BROWSER_BUSINESS_RECALC = 0）。 */
+  function renderV4BandTable(hostId, blk){
+    var host = el(hostId);
+    if(!host) return;
+    var rows = (blk || {}).rows || [];
+    if(!rows.length){
+      host.innerHTML = '<div class="mod-partial">暂无评分区间收益验证产物。</div>';
+      return;
+    }
+    host.innerHTML = '<table class="thr-table"><thead><tr>' +
+      '<th>评分区间</th><th>样本数</th><th>已完成</th><th>待成熟</th>' +
+      '<th>平均收益</th><th>中位数收益</th><th>胜率</th><th>最大回撤</th>' +
+      '<th>最近信号日</th><th>最近成熟日</th>' +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        return '<tr>' +
+          '<td class="mono">' + esc(r.band_label) + '</td>' +
+          '<td class="mono">' + esc(r.signal_count == null ? GLYPH : r.signal_count) + '</td>' +
+          '<td class="mono">' + esc(r.completed_count == null ? GLYPH : r.completed_count) + '</td>' +
+          '<td class="mono">' + esc(r.pending_count == null ? GLYPH : r.pending_count) + '</td>' +
+          '<td class="mono">' + esc(r.mean_return_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.median_return_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.win_rate_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.maximum_drawdown_display || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.last_signal_date || GLYPH) + '</td>' +
+          '<td class="mono">' + esc(r.last_matured_signal_date || GLYPH) + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function renderV4ScoreBand(){
+    renderV4BandTable('v4-band-pl', V4_BAND.PRICE_LOCATION);
+    renderV4BandTable('v4-band-mc', V4_BAND.MARKET_CONFIRMATION);
+  }
+
+  /* A18 —— P01 修订块（Pre-Phase5 R1 研究轮次解释 + 阈值口径 + PIT 工程说明）
+     属于 PART H 明确清理对象，本轮从 Current User-visible DOM 移除。
+     Quality 柱的 17 个成员（含 P01 净息差）与其 Raw Value / 日期照常显示。 */
+
+  function renderV4(d){
+    var day = days[d] || null;
+    if(!day && typeof window.__CMB_REQUEST_DAY__ === 'function'){
+      window.__CMB_REQUEST_DAY__(d);
+    }
+    var pl = (day && day.pillars) || {};
+
+    /* ① 五柱总览卡 —— 只替换 V2 hero 的位置，不新增综合分 */
+    el('v4-pillar-grid').innerHTML = V4P.map(function(pm){
+      var b = pl[pm.pillar] || {};
+      var ok = (b.status === 'FULLY_AVAILABLE' && b.score !== null && b.score !== undefined);
+      var tone = ok ? scoreTone(b.score, 100) : 'unavailable';
+      return '<div class="kpi-card" data-pillar="' + esc(pm.pillar) + '">' +
+        '<div class="kpi-label">' + esc(pm.label_zh) + '</div>' +
+        '<span class="kpi-value ' + toneTextCls(tone) + '">' +
+          (ok ? fmt(b.score, 2) : GLYPH) + '</span>' +
+        '<div class="kpi-sub">满分 100 · ' +
+          (ok ? '完整可用' : (STATUS_CN[b.status] || '非完整可用')) + '</div>' +
+        '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+          (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div>' +
+        '</div>';
+    }).join('');
+
+    /* ② 第二主视觉 = 前瞻状态 + Risk Overlay（都不产分数） */
+    var f = (day && day.forward) || {};
+    el('v4-fwd-state').innerHTML =
+      '<span class="chip c-' + esc(f.state || 'INSUFFICIENT_EVIDENCE') + '">' +
+      (ST[f.state] || '证据不足') + '</span>';
+    el('v4-fwd-meta').innerHTML =
+      '<div class="kpi-sub">置信度 ' + esc(f.confidence_display || GLYPH) + '</div>' +
+      '<div class="kpi-rate">' + esc(f.note_zh || '') + '</div>' +
+      (f.reason ? '<div class="mod-partial">' + esc(f.reason) + '</div>' : '');
+    var ro = (day && day.risk_overlay) || {};
+    el('v4-ro-score').textContent = (ro.net_score === null || ro.net_score === undefined)
+      ? GLYPH : fmt(ro.net_score, 2);
+    el('v4-ro-meta').innerHTML =
+      '<div class="kpi-sub">' + esc(STATUS_CN[ro.status] || ro.status || GLYPH) + '</div>' +
+      '<div class="kpi-rate">区间 ' + esc(ro.range || '0..-20') + ' · 不并入任何柱' +
+        (ro.applied_to_pillars ? '' : ' · 未作用于柱') + '</div>' +
+      '<div class="kpi-rate">缺失不补 0：' +
+        (ro.zero_fill ? '是（违规）' : '否') + '</div>' +
+      ((ro.missing_fields || []).length
+        ? '<div class="mod-partial">缺失字段：' +
+          esc((ro.missing_fields || []).join('、')) + '（缺失不补 0）</div>' : '');
+
+    /* ③ 五柱明细 —— 每一项都可回溯到自己的输入 */
+    el('v4-pillar-blocks').innerHTML = V4P.map(function(pm){
+      var b = pl[pm.pillar] || {}, mm = V4M[pm.pillar] || {};
+      var ok = b.status === 'FULLY_AVAILABLE';
+      var h = [];
+      h.push('<div class="mod-block" data-pillar="' + esc(pm.pillar) + '">');
+      h.push('<div class="section-label mod-title"><span>' + esc(pm.label_zh) + '</span>' +
+        '<span class="mod-max">· 100 分</span>' +
+        /* PART B / PART C / D / E —— 用户可见的是「展示政策标识」。
+           旧的 finalist 标识（VA0_PURE_EQUAL_3_FACTOR / PL1_..._EQUAL /
+           MC1_DECOUPLED_ARITHMETIC）出现在指纹绑定的 CONTRACT V3 里，属
+           Fingerprint-bound Contract Identifier：内部兼容保留，但不再下发、
+           也不再渲染，避免用户看到与真实冻结权重矛盾的旧口径。 */
+        '<span class="mod-count">' +
+        esc(pm.display_policy_label || pm.display_policy_id || pm.finalist || '') +
+        '</span></div>');
+      h.push('<div class="mod-subtotal"><span class="st-label">' +
+        esc(pm.formula_zh || pm.note_zh || '') + '</span>' + '</span>' +
+        '<span class="st-value ' + toneTextCls(ok ? scoreTone(b.score, 100)
+                                                  : 'unavailable') + '">' +
+        (ok ? fmt(b.score, 2) : GLYPH) + ' / 100</span></div>');
+      h.push('<div class="mod-bar"><div class="score-bar-wrap">' +
+        '<i class="score-bar-fill" style="width:' +
+        (ok ? barWidth(b.score, 100).toFixed(2) : 0) + '%"></i></div></div>');
+      /* H01 / H02 —— 价格位置 / 市场确认的可解释性说明 */
+      if(pm.explain_zh){
+        h.push('<div class="research-note">' + esc(pm.explain_zh) + '</div>');
+      }
+      if(pm.pillar === 'MACRO' && b.cn10y){
+        h.push('<div class="score-row"><div class="score-row-head">' +
+          '<span class="score-row-label">10 年期国债收益率</span>' +
+          '<span class="score-row-score">' + esc(b.cn10y.raw_pp_display) + '</span></div>' +
+          /* F004 —— "as of / staleness" 工程英文改为中文用户文案 */
+          '<div class="score-row-meta"><span class="raw">数据日期 ' +
+          esc(b.cn10y.asof || GLYPH) + '</span><span>数据时效：距最新数据 ' +
+          esc(b.cn10y.staleness_td === null ? GLYPH : b.cn10y.staleness_td) +
+          ' 个交易日</span></div>' +
+          '<div class="mod-partial">' + esc(b.cn10y.saturation_note_zh || '') +
+          '</div></div>');
+      }
+      var mems = b.members || [];
+      /* PART C / D / E —— 三柱的旧 member 行已从 payload 移除；只有当真正
+         还有 member 时才画明细区，避免留下「该交易日无逐项明细」的空壳行。 */
+      if(mems.length){
+      h.push('<div class="mod-metrics">' + mems.map(function(m){
+        var meta = mm[m.id] || {}, mx = meta.max;
+        var has = (m.score !== null && m.score !== undefined);
+        var tone = has ? toneOf(m.score, mx === null || mx === undefined ? 100 : mx,
+                                m.status) : 'unavailable';
+        /* C03 —— 有量程就画进度条（0~100 分数与标准化子分都有量程）；
+           C04 —— 原始值只显示数字，绝不给它伪造进度条。 */
+        return '<div class="score-row">' +
+          '<div class="score-row-head"><span class="score-row-label">' + esc(m.id) +
+          ' · ' + esc(meta.name || m.id) + '</span>' +
+          '<span class="score-row-score ' + toneTextCls(tone) + '">' +
+          (has ? fmt(m.score, 2) : GLYPH) +
+          ((mx === null || mx === undefined) ? '' : ' / ' + fmt(mx, 2)) +
+          '</span></div>' +
+          ((mx === null || mx === undefined) ? '' :
+            '<div class="score-bar-wrap"><i class="score-bar-fill" style="width:' +
+            (has ? barWidth(m.score, mx).toFixed(2) : 0) + '%"></i></div>') +
+          '<div class="score-row-meta"><span class="raw">' +
+          esc(v4RawLabel(pm.pillar, m.id)) + ' ' +
+          esc(v4RawText(pm.pillar, m.id, m.raw)) +
+          /* PART H —— Quality 的 Raw Value 后面必须带数据所属日期 */
+          esc(pm.pillar === 'QUALITY' ? v4QualityDateSuffix(b, m.id) : '') + '</span>' +
+          '<span>' + statusPill(m.status) + '</span></div></div>';
+      }).join('') + '</div>');
+      }
+      /* RC V5 / PART F —— 三柱的组成指标明细（与 Quality 同一套组件化结构）。
+         G01 / G03 / G05 —— 内部权重政策 ID 不再作为用户可见文案输出。 */
+      if(pm.pillar === 'VALUATION' || pm.pillar === 'PRICE_LOCATION' ||
+         pm.pillar === 'MARKET_CONFIRMATION'){
+        h.push(v4ComponentRows(b));
+      }
+      h.push('</div>');
+      return h.join('');
+    }).join('');
+
+    el('v4-day-status').textContent = '可查询交易日 ' + dates.length + ' 个 · 起始 ' +
+      (dates[0] || GLYPH) + ' · 截止 ' + (dates[dates.length - 1] || GLYPH) +
+      ' · 当前 ' + d;
+    /* G08 / G09 / G10 / PART H —— 数据来源 / 运行期实现 / 前复权技术说明 /
+       Macro 饱和说明均属内部工程文案，不再写入用户可见 DOM。 */
+    /* ⑥ —— 综合研判正文（Positive / Negative / Conclusion）继续保留。 */
+    renderV4Judgment(d);
+    /* RC V9 / ARCH B —— 只读质量诊断层（失败即闭门，不影响上面任何内容）。 */
+    renderV4Diagnostic();
+  }
+
+  /* =========================================================================
+   * RC V9 / ARCH B —— 质量诊断（READ-ONLY DIAGNOSTIC LAYER）
+   *
+   * PART AI —— 所有 Peer Median / Percentile / Rank / Moat / Regime /
+   *            Attribution / Top Drivers 全部由 Python 预计算；本函数只做
+   *            fetch 结果的 render / filter，绝不重算（recalc count = 0）。
+   * PART AE —— 不产出第二个 100 分；唯一正式质量分仍在五柱总览里。
+   * PART AK —— 诊断数据不可用时显示「数据暂不可用」，不得用旧数据冒充。
+   * PART AG —— 不可比不是缺陷：只说「暂不横向排名」，不暴露 Provider / API /
+   *            Gate 编号等工程术语。
+   * ======================================================================= */
+  /* PART AI —— 诊断数字同样由 Python 预计算展示串（payload.display_map_diag），
+     浏览器只做「精确字符串查表」，绝不 toFixed / Math.round，
+     失配计入 __CMB_DIAG_FMT_MISS__（门禁要求恒为 0）。 */
+  window.__CMB_DIAG_FMT_MISS__ = {count: 0, keys: {}};
+  var DIAG_DMAP = {};
+  function diagLoadMap(){
+    DIAG_DMAP = (DATA && DATA.quality_diagnostic_data &&
+                 DATA.quality_diagnostic_data.display_map_diag) || {};
+  }
+  function diagNum(v, dp){
+    if(v === null || v === undefined || v === '') return GLYPH;
+    var d = (dp === undefined ? 2 : dp);
+    var k = String(v) + '|' + d;
+    var s = DIAG_DMAP[k];
+    if(s === undefined){
+      var m = window.__CMB_DIAG_FMT_MISS__;
+      m.count++; m.keys[k] = 1;
+      s = DIAG_DMAP[String(Number(v)) + '|' + d];
+    }
+    return (s === undefined) ? GLYPH : s;
+  }
+  function diagChip(label, value){
+    return '<div class="kpi-card diag-chip"><div class="kpi-label">' +
+      esc(label) + '</div><div class="kpi-rate">' + value + '</div></div>';
+  }
+  function diagRow(cells){
+    return '<div class="diag-row">' + cells.map(function(c){
+      return '<span>' + c + '</span>';
+    }).join('') + '</div>';
+  }
+
+  /* =====================================================================
+   * RC V12 / F002 —— DIAGNOSTIC_SCHEMA_RC12：18 层规范化校验管线
+   *
+   * 浏览器仍然只做 FETCH / PARSE / VALIDATE / RENDER / FILTER：
+   *   * 不重算 peer median / rank / percentile / quartile / coverage /
+   *     attribution / regime / industry admission
+   *     （BROWSER_DIAGNOSTIC_BUSINESS_RECALC_COUNT = 0）；
+   *   * 顶层 / nested / 预期身份 三者任意冲突 -> 整个诊断 UNAVAILABLE，
+   *     不做部分展示、不做自动修正、不做降级显示；
+   *   * 正式五柱与 Quality 17 成员不受诊断校验影响；
+   *   * 诊断失败绝不阻断正式得分（Fail-Closed）。
+   *
+   * 18 层（顺序固定，任一层 FAIL 即整包 UNAVAILABLE）：
+   *   L01 传输完整性（HTTP / 空体）
+   *   L02 JSON 解析完整性（重复键检测发生在 JSON.parse 之前）
+   *   L03 规范化身份（顶层 == nested == 预期）
+   *   L04 顶层 schema（必需键 + 容器类型）
+   *   L05 nested schema（子块形状）
+   *   L06 必需字段（不允许 null / missing / 错型跳过）
+   *   L07 类型完整性
+   *   L08 枚举完整性（全部由 Diagnostic Contract V1 冻结）
+   *   L09 单位语义（按 metric_id 冻结；禁止「政策分」外溢）
+   *   L10 日期与 PIT 完整性
+   *   L11 同行基数（17 个 metric，不多不少、不重复）
+   *   L12 交叉字段算术（coverage / rank / quartile / F01 内块）
+   *   L13 归因完整性（成员冻结、和自洽、零成员必须存在）
+   *   L14 Regime 不变量（枚举 / 唯一 / 阈值由 Contract 固定）
+   *   L15 行业聚合准入（发布闸 AND 可得闸，聚合之前过滤）
+   *   L16 来源追溯完整性
+   *   L17 重复身份与哈希一致性
+   *   L18 最终横截面不变量
+   * ===================================================================== */
+  var DIAG_PIPELINE_VERSION = 'DIAGNOSTIC_SCHEMA_RC12';
+  var DIAG_PIPELINE_LAYERS = [
+    'L01_TRANSPORT_INTEGRITY',
+    'L02_JSON_PARSE_INTEGRITY',
+    'L03_CANONICAL_IDENTITY',
+    'L04_TOP_LEVEL_SCHEMA',
+    'L05_NESTED_SCHEMA',
+    'L06_REQUIRED_FIELDS',
+    'L07_TYPE_INTEGRITY',
+    'L08_ENUM_INTEGRITY',
+    'L09_UNIT_SEMANTICS',
+    'L10_DATE_AND_PIT_INTEGRITY',
+    'L11_PEER_CARDINALITY',
+    'L12_CROSS_FIELD_ARITHMETIC',
+    'L13_ATTRIBUTION_COMPLETENESS',
+    'L14_REGIME_INVARIANTS',
+    'L15_INDUSTRY_ADMISSION',
+    'L16_SOURCE_TRACE_INTEGRITY',
+    'L17_DUPLICATE_IDENTITY_AND_HASH',
+    'L18_FINAL_CROSS_SECTION_INVARIANTS'
+  ];
+
+  /* ---- 冻结的合法枚举集合（取自 Diagnostic Contract V1，浏览器不扩展）---- */
+  var DIAG_LEGAL = {
+    metric_ids: ['P01','P02','P03','P04','P05','P06',
+                 'A01','A02','A03','A04','A05','A06',
+                 'F01','F02','F03','F04','D02'],
+    coverage_status: ['SUFFICIENT','INSUFFICIENT_COVERAGE','NOT_APPLICABLE',
+                      'NOT_COMPARABLE','INSUFFICIENT_COMPARABLE_PEERS'],
+    comparability_status: ['COMPARABLE','NOT_APPLICABLE','NOT_COMPARABLE',
+                           'NOT_COMPARABLE__METHOD_UNKNOWN',
+                           'NOT_COMPARABLE__SCOPE_UNKNOWN',
+                           'NOT_COMPARABLE__REQUIREMENT_UNKNOWN'],
+    comparability_detail: ['SAME_DEFINITION','COMPARABLE_WITH_NORMALIZATION',
+                           'COMPARABLE_WITH_METHOD_DISCLOSURE','NOT_APPLICABLE'],
+    moat_status: ['MOAT_WIDENING','MOAT_STABLE','MOAT_NARROWING','UNVERIFIED'],
+    evidence_strength: ['HIGH','MEDIUM','NOT_APPLICABLE','NOT_COMPARABLE'],
+    direction: ['higher','lower'],
+    group: ['PROFITABILITY_OPERATING','ASSET_QUALITY_RISK',
+            'CAPITAL_FUNDING_MOAT','SHAREHOLDER_POLICY'],
+    regime_status: ['PUBLISHED','INSUFFICIENT_COVERAGE'],
+    regime_class: ['STRONG_TAILWIND','TAILWIND','NEUTRAL_MIXED',
+                   'HEADWIND','STRONG_HEADWIND'],
+    relative_aggregate_status: ['PUBLISHED','NOT_PUBLISHED_INSUFFICIENT_COVERAGE',
+                                'SUPPRESSED','SUPPRESSED__INSUFFICIENT_COVERAGE'],
+    admission_status: ['ADMITTED','NOT_ADMITTED_PRE_PUBLICATION'],
+    period_keys: ['SINCE_2021_BASELINE','LAST_3_YEARS','LAST_1_YEAR'],
+    comparison_semantics: ['PUBLIC_REGULATORY_HEADROOM','RAW_CET1'],
+    /* 单位按 metric_id 冻结：Raw CET1 -> %；安全垫 -> 个百分点；
+       「政策分」只允许出现在 Quality 得分贡献口径 D02，禁止外溢。 */
+    unit_by_metric: {'P01':'%','P02':'%','P03':'%','P04':'%','P05':'%','P06':'%',
+                     'A01':'%','A02':'%','A03':'%','A04':'%','A05':'%','A06':'%',
+                     'F01':'个百分点','F02':'%','F03':'%','F04':'%',
+                     'D02':'政策分'},
+    industry_unit: ['%','个百分点']
+  };
+  /* ---- Contract 固定阈值：payload 无权改写 ---------------------------- */
+  var DIAG_PINNED = {
+    absolute_quality_max: 100,
+    absolute_quality_role: 'FORMAL_ABSOLUTE_QUALITY_SCORE',
+    expected_metric_count: 17,
+    min_peers: 6,
+    min_coverage_pct: 70,
+    relative_threshold_pct: 80,
+    staleness_rule: 'PAYLOAD_IDENTITY_MISMATCH__NOT_CALENDAR_AGE'
+  };
+  var DIAG_SHA_RE = /^[0-9a-f]{64}$/;
+  var DIAG_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function _dgNum(x){ return typeof x === 'number' && isFinite(x); }
+  function _dgStr(x){ return typeof x === 'string' && x.length > 0; }
+  function _dgIn(v, set){ return typeof v === 'string' && set.indexOf(v) >= 0; }
+  function _dgNumOrNull(x){ return (x === null || x === undefined) ? true : _dgNum(x); }
+  function _dgHas(x){ return x !== undefined && x !== null; }
+  function _dgObj(x){ return !!x && typeof x === 'object' && !Array.isArray(x); }
+  function _dgArr(x){ return !!x && Array.isArray(x); }
+  function _dgDate(x){ return _dgStr(x) && DIAG_DATE_RE.test(x); }
+  function _dgBad(r){ return {ok:false, reason:r, policy:DIAG_PIPELINE_VERSION}; }
+  function _dgBadL(l, r){ return _dgBad('L' + l + '_' + r); }
+
+  /* =====================================================================
+   * L01 / L02 —— 严格解析：重复键检测必须发生在 JSON.parse 之前
+   * 同一对象里出现重复键（尤其是身份键且取值冲突）一律 Fail Closed，
+   * 不允许「后者覆盖前者」静默生效。
+   * ===================================================================== */
+  function diagParsePayload(text){
+    var res = {ok:false, value:null, reason:'EMPTY_BODY', duplicateKeys:[]};
+    if(typeof text !== 'string' || text.length === 0) return res;
+    var i = 0, n = text.length, dups = [];
+    function fail(m){ var e = new Error(m); e.__diagParse = true; throw e; }
+    function ws(){ while(i < n && (text.charAt(i) === ' ' || text.charAt(i) === '\t' ||
+                                   text.charAt(i) === '\r' || text.charAt(i) === '\n')) i++; }
+    var ESC_MAP = {'n':'\n','t':'\t','r':'\r','b':'\b','f':'\f',
+                   '/':'/','\\':'\\','"':'"'};
+    function str(){
+      if(text.charAt(i) !== '"') fail('BAD_STRING_AT_' + i);
+      i++;
+      var s = '';
+      while(i < n){
+        var c = text.charAt(i);
+        if(c === '"'){ i++; return s; }
+        if(c === '\\'){
+          var e = text.charAt(i + 1);
+          i += 2;
+          if(e === 'u'){
+            var hex = text.substr(i, 4);
+            if(!/^[0-9a-fA-F]{4}$/.test(hex)) fail('BAD_UNICODE_ESCAPE_AT_' + i);
+            s += String.fromCharCode(Number('0x' + hex));
+            i += 4;
+            continue;
+          }
+          if(!(e in ESC_MAP)) fail('BAD_ESCAPE_AT_' + (i - 2));
+          s += ESC_MAP[e];
+          continue;
+        }
+        s += c; i++;
+      }
+      fail('UNTERMINATED_STRING');
+    }
+    function val(){
+      ws();
+      var c = text.charAt(i);
+      if(c === '{') return obj();
+      if(c === '[') return arr();
+      if(c === '"') return str();
+      if(text.substr(i, 4) === 'true'){ i += 4; return true; }
+      if(text.substr(i, 5) === 'false'){ i += 5; return false; }
+      if(text.substr(i, 4) === 'null'){ i += 4; return null; }
+      var m = /^-?\d+(\.\d+)?([eE][+-]?\d+)?/.exec(text.slice(i, i + 64));
+      if(!m) fail('BAD_TOKEN_AT_' + i);
+      i += m[0].length;
+      return Number(m[0]);
+    }
+    function arr(){
+      i++; var out = []; ws();
+      if(text.charAt(i) === ']'){ i++; return out; }
+      for(;;){
+        out.push(val()); ws();
+        if(text.charAt(i) === ','){ i++; continue; }
+        if(text.charAt(i) === ']'){ i++; return out; }
+        fail('BAD_ARRAY_AT_' + i);
+      }
+    }
+    function obj(){
+      i++; var out = {}, seen = {}; ws();
+      if(text.charAt(i) === '}'){ i++; return out; }
+      for(;;){
+        ws();
+        var k = str();
+        if(seen[k] === 1){ dups.push(k); } else { seen[k] = 1; }
+        ws();
+        if(text.charAt(i) !== ':') fail('EXPECT_COLON_AT_' + i);
+        i++;
+        out[k] = val();
+        ws();
+        if(text.charAt(i) === ','){ i++; continue; }
+        if(text.charAt(i) === '}'){ i++; return out; }
+        fail('BAD_OBJECT_AT_' + i);
+      }
+    }
+    var v;
+    try{
+      v = val();
+      ws();
+      if(i !== n) fail('TRAILING_CONTENT_AT_' + i);
+    }catch(e){
+      res.reason = 'JSON_PARSE_ERROR:' + (e && e.message ? e.message : 'UNKNOWN');
+      res.duplicateKeys = dups;
+      return res;
+    }
+    if(dups.length){
+      res.reason = 'DUPLICATE_JSON_KEY:' + dups.join(',');
+      res.duplicateKeys = dups;
+      return res;
+    }
+    res.ok = true; res.value = v; res.reason = null;
+    return res;
+  }
+
+  /* =====================================================================
+   * L03 ~ L18 —— 规范化校验管线
+   * ===================================================================== */
+  function diagValidate(d, view){
+    try{
+      return _diagValidateInner(d, view);
+    }catch(e){
+      /* 校验器自身异常一律 Fail Closed，绝不降级放行 */
+      return _dgBad('VALIDATOR_INTERNAL_ERROR_FAIL_CLOSED');
+    }
+  }
+
+  function _diagValidateInner(d, view){
+    /* ---------- L02 载荷本体 ---------- */
+    if(!d || typeof d !== 'object' || Array.isArray(d)){
+      return _dgBadL('02', 'EMPTY_OR_NOT_OBJECT');
+    }
+    var exp = (view && view.quality_diagnostic) || {};
+    var id  = d.payload_identity;
+
+    /* ---------- L03 规范化身份：顶层 == nested == 预期 ---------- */
+    if(!_dgObj(id)){ return _dgBadL('03', 'PAYLOAD_IDENTITY_NOT_OBJECT'); }
+    var IDENT = [
+      ['model_id','model_id','model_id','expected_model_id','MODEL_ID_MISMATCH'],
+      ['rc_id','rc_id','release_candidate_id','expected_release_candidate_id',
+       'RELEASE_CANDIDATE_ID_MISMATCH'],
+      ['model_fingerprint','model_fingerprint','model_fingerprint',
+       'expected_model_fingerprint','FINGERPRINT_MISMATCH'],
+      ['diagnostic_contract_id','diagnostic_contract_id','diagnostic_contract_id',
+       'expected_diagnostic_contract_id','DIAGNOSTIC_CONTRACT_ID_MISMATCH'],
+      ['schema_version','schema','schema_version',
+       'expected_diagnostic_schema_version','SCHEMA_VERSION_MISMATCH'],
+      ['as_of','as_of','as_of','expected_diagnostic_as_of',
+       'STALE_IDENTITY_AS_OF_MISMATCH'],
+      ['payload_version','payload_version','payload_version',
+       'expected_payload_version','PAYLOAD_VERSION_MISMATCH'],
+      ['model_contract_version','model_contract_version','model_contract_version',
+       'expected_model_contract_version','MODEL_CONTRACT_VERSION_MISMATCH'],
+      ['diagnostic_contract_sha256','diagnostic_contract_sha256',
+       'diagnostic_contract_sha256','diagnostic_contract_sha256',
+       'DIAGNOSTIC_CONTRACT_SHA_MISMATCH'],
+      ['diagnostic_architecture','diagnostic_architecture',
+       'diagnostic_architecture','architecture',
+       'DIAGNOSTIC_ARCHITECTURE_MISMATCH']
+    ];
+    for(var k=0;k<IDENT.length;k++){
+      var top = d[IDENT[k][1]], nest = id[IDENT[k][2]], want = exp[IDENT[k][3]];
+      var rs = IDENT[k][4];
+      if(!_dgHas(top))  { return _dgBadL('03', 'MISSING_TOP_LEVEL_IDENTITY:' + rs); }
+      if(!_dgHas(nest)) { return _dgBadL('03', 'MISSING_NESTED_IDENTITY:' + rs); }
+      /* F002 核心：顶层与 nested 任意冲突 -> 整个诊断不可用 */
+      if(top !== nest){ return _dgBadL('03', 'TOP_LEVEL_VS_NESTED_IDENTITY_CONFLICT:' + rs); }
+      if(_dgHas(want) && want !== '' && top !== want){ return _dgBadL('03', rs); }
+    }
+    if(_dgStr(exp.expected_diagnostic_period) &&
+       id.report_period !== exp.expected_diagnostic_period){
+      return _dgBadL('03', 'STALE_IDENTITY_PERIOD_MISMATCH');
+    }
+    if(_dgStr(exp.expected_diagnostic_architecture) &&
+       d.diagnostic_architecture !== exp.expected_diagnostic_architecture){
+      return _dgBadL('03', 'DIAGNOSTIC_ARCHITECTURE_MISMATCH');
+    }
+    var REQ_ID = ['model_id','model_fingerprint','diagnostic_contract_id',
+                  'schema_version','release_candidate_id','as_of','report_period',
+                  'payload_version','model_contract_version','staleness_rule',
+                  'diagnostic_contract_sha256','diagnostic_architecture'];
+    for(var i2=0;i2<REQ_ID.length;i2++){
+      if(!_dgHas(id[REQ_ID[i2]])){
+        return _dgBadL('03', 'MISSING_IDENTITY_FIELD:' + REQ_ID[i2]);
+      }
+      if(!_dgStr(id[REQ_ID[i2]])){
+        return _dgBadL('03', 'IDENTITY_FIELD_NOT_STRING:' + REQ_ID[i2]);
+      }
+    }
+    if(id.staleness_rule !== DIAG_PINNED.staleness_rule){
+      return _dgBadL('03', 'STALENESS_RULE_MISMATCH');
+    }
+
+    /* ---------- L04 顶层 schema ---------- */
+    var TOPREQ = [
+      ['schema','s'], ['model_id','s'], ['rc_id','s'], ['model_fingerprint','s'],
+      ['as_of','s'], ['payload_version','s'], ['model_contract_version','s'],
+      ['diagnostic_contract_id','s'], ['diagnostic_contract_sha256','s'],
+      ['diagnostic_payload_sha256','s'], ['diagnostic_architecture','s'],
+      ['absolute_quality','o'], ['peer_metrics','a'], ['banking_regime','o'],
+      ['attribution','o'], ['coverage_metadata','o'], ['display_map_diag','o'],
+      ['relative_aggregate_gate','o'], ['source_freshness','o'],
+      ['industry_aggregate_trace','a'], ['fail_closed','o'],
+      ['unverified_metrics','a'], ['payload_identity','o']
+    ];
+    for(var t=0;t<TOPREQ.length;t++){
+      var tk = TOPREQ[t][0], tt = TOPREQ[t][1], tv = d[tk];
+      if(!_dgHas(tv)){ return _dgBadL('04', 'MISSING_FIELD:' + tk); }
+      if(tt === 's' && !_dgStr(tv)){ return _dgBadL('04', 'FIELD_NOT_STRING:' + tk); }
+      if(tt === 'o' && !_dgObj(tv)){ return _dgBadL('04', 'FIELD_NOT_OBJECT:' + tk); }
+      if(tt === 'a' && !_dgArr(tv)){ return _dgBadL('04', 'FIELD_NOT_ARRAY:' + tk); }
+    }
+    if(!_dgDate(d.as_of)){ return _dgBadL('04', 'AS_OF_NOT_ISO_DATE'); }
+    var asOf = d.as_of, repP = id.report_period;
+
+    /* ---------- L05 / L06 / L07 —— 正式绝对质量 ---------- */
+    var aq = d.absolute_quality;
+    if(aq.role !== DIAG_PINNED.absolute_quality_role){
+      return _dgBadL('05', 'ABSOLUTE_QUALITY_ROLE_MISMATCH');
+    }
+    if(!_dgNum(aq.score)){ return _dgBadL('07', 'ABSOLUTE_QUALITY_NOT_NUMERIC'); }
+    if(aq.score < 0 || aq.score > DIAG_PINNED.absolute_quality_max){
+      return _dgBadL('07', 'ABSOLUTE_QUALITY_OUT_OF_RANGE');
+    }
+    if(aq.max !== DIAG_PINNED.absolute_quality_max){
+      return _dgBadL('05', 'ABSOLUTE_QUALITY_MAX_MISMATCH');
+    }
+
+    /* ---------- L18a 诊断失败不得阻断正式得分 ---------- */
+    var fc = d.fail_closed;
+    if(fc.diagnostic_failure_blocks_formal_score !== false){
+      return _dgBadL('18', 'FAIL_CLOSED_CONTRACT_VIOLATION');
+    }
+
+    /* ---------- L05 / L06 coverage_metadata ---------- */
+    var cm = d.coverage_metadata;
+    if(!_dgNum(cm.primary_universe_n) || cm.primary_universe_n < 1){
+      return _dgBadL('06', 'PRIMARY_UNIVERSE_N_INVALID');
+    }
+    /* 阈值由 Contract 固定，payload 无权改写，也不得缺失 */
+    if(cm.min_peers !== DIAG_PINNED.min_peers){
+      return _dgBadL('06', 'CONTRACT_MIN_PEERS_TAMPERED');
+    }
+    if(cm.min_coverage_pct !== DIAG_PINNED.min_coverage_pct){
+      return _dgBadL('06', 'CONTRACT_MIN_COVERAGE_PCT_TAMPERED');
+    }
+    if(cm.peer_future_leak_count !== 0){
+      return _dgBadL('06', 'PEER_FUTURE_LEAK');
+    }
+    if(!_dgStr(cm.pit_rule) || !_dgStr(cm.same_period_rule)){
+      return _dgBadL('06', 'PIT_RULE_MISSING');
+    }
+
+    /* ---------- L08 ~ L12 peer_metrics ---------- */
+    var pm = d.peer_metrics;
+    if(pm.length !== DIAG_PINNED.expected_metric_count){
+      return _dgBadL('11', 'PEER_METRIC_COUNT_MISMATCH');
+    }
+    var seen = {}, seenIdx = {}, asOfSeen = null;
+      var ALWAYS = ['metric_id','metric_name_zh','unit','group','coverage_status',
+                    'comparability_status','moat_status','evidence_strength'];
+      /* 这两个键必须存在（值可为 null —— 不可比 / 不适用时显式为 null），
+         但绝不允许「键缺失」蒙混过关。 */
+      var KEY_PRESENT = ['n_valid','coverage_pct'];
+      var WHEN_DATA = ['report_period','available_from','direction'];
+    for(var a=0;a<pm.length;a++){
+      var m = pm[a] || {};
+      var mid = m.metric_id;
+      if(!_dgIn(mid, DIAG_LEGAL.metric_ids)){
+        return _dgBadL('08', 'ILLEGAL_METRIC_ID:' + String(mid));
+      }
+      if(seen[mid]){ return _dgBadL('17', 'DUPLICATE_METRIC_ID:' + mid); }
+      seen[mid] = 1; seenIdx[mid] = a;
+      if(!_dgObj(m)){ return _dgBadL('05', 'PEER_METRIC_NOT_OBJECT:' + mid); }
+      for(var q=0;q<ALWAYS.length;q++){
+        if(!_dgHas(m[ALWAYS[q]])){
+          return _dgBadL('06', 'MISSING_PEER_FIELD:' + mid + '.' + ALWAYS[q]);
+        }
+      }
+      for(var q2=0;q2<KEY_PRESENT.length;q2++){
+        if(m[KEY_PRESENT[q2]] === undefined){
+          return _dgBadL('06', 'MISSING_PEER_FIELD:' + mid + '.' + KEY_PRESENT[q2]);
+        }
+      }
+      if(!_dgStr(m.metric_name_zh)){
+        return _dgBadL('07', 'PEER_NAME_NOT_STRING:' + mid);
+      }
+      if(!_dgIn(m.coverage_status, DIAG_LEGAL.coverage_status)){
+        return _dgBadL('08', 'ILLEGAL_COVERAGE_STATUS:' + mid);
+      }
+      if(!_dgIn(m.comparability_status, DIAG_LEGAL.comparability_status)){
+        return _dgBadL('08', 'ILLEGAL_COMPARABILITY_STATUS:' + mid);
+      }
+      if(_dgHas(m.comparability_detail) &&
+         !_dgIn(m.comparability_detail, DIAG_LEGAL.comparability_detail)){
+        return _dgBadL('08', 'ILLEGAL_COMPARABILITY_DETAIL:' + mid);
+      }
+      if(!_dgIn(m.moat_status, DIAG_LEGAL.moat_status)){
+        return _dgBadL('08', 'ILLEGAL_MOAT_STATUS:' + mid);
+      }
+      if(!_dgIn(m.evidence_strength, DIAG_LEGAL.evidence_strength)){
+        return _dgBadL('08', 'ILLEGAL_EVIDENCE_STRENGTH:' + mid);
+      }
+      if(!_dgIn(m.group, DIAG_LEGAL.group)){
+        return _dgBadL('08', 'ILLEGAL_GROUP:' + mid);
+      }
+      /* L09 单位语义：按 metric_id 冻结 */
+      if(m.unit !== DIAG_LEGAL.unit_by_metric[mid]){
+        return _dgBadL('09', 'UNIT_NOT_ALLOWED_FOR_METRIC:' + mid);
+      }
+      /* L08 comparison_semantics 白名单 */
+      if(_dgHas(m.comparison_semantics) &&
+         !_dgIn(m.comparison_semantics, DIAG_LEGAL.comparison_semantics)){
+        return _dgBadL('08', 'ILLEGAL_COMPARISON_SEMANTICS:' + mid);
+      }
+      if(m.comparison_semantics === 'PUBLIC_REGULATORY_HEADROOM' &&
+         m.unit !== '个百分点'){
+        return _dgBadL('09', 'HEADROOM_UNIT_MISMATCH:' + mid);
+      }
+      if(m.comparison_semantics === 'RAW_CET1' && m.unit !== '%'){
+        return _dgBadL('09', 'RAW_CET1_UNIT_MISMATCH:' + mid);
+      }
+      var nv = m.n_valid, cp = m.coverage_pct;
+      if(!_dgNumOrNull(nv)){ return _dgBadL('07', 'N_VALID_NOT_FINITE:' + mid); }
+      if(!_dgNumOrNull(cp)){ return _dgBadL('07', 'COVERAGE_PCT_NOT_FINITE:' + mid); }
+      if(_dgNum(nv) && (nv < 0 || nv > cm.primary_universe_n)){
+        return _dgBadL('12', 'N_VALID_OUT_OF_RANGE:' + mid);
+      }
+      if(_dgNum(cp) && (cp < 0 || cp > 100)){
+        return _dgBadL('12', 'COVERAGE_PCT_OUT_OF_RANGE:' + mid);
+      }
+      /* 只要有可比数据，报告期 / 可得日 / 方向就是真必填 */
+      if(_dgNum(nv) && nv > 0){
+        for(var w=0;w<WHEN_DATA.length;w++){
+          if(!_dgStr(m[WHEN_DATA[w]])){
+            return _dgBadL('06', 'MISSING_PEER_FIELD:' + mid + '.' + WHEN_DATA[w]);
+          }
+        }
+        if(m.direction !== 'higher' && m.direction !== 'lower'){
+          return _dgBadL('08', 'ILLEGAL_DIRECTION:' + mid);
+        }
+        if(!_dgDate(m.report_period)){
+          return _dgBadL('10', 'PEER_REPORT_PERIOD_NOT_DATE:' + mid);
+        }
+        if(m.report_period !== repP){
+          return _dgBadL('10', 'PEER_REPORT_PERIOD_MISMATCH:' + mid);
+        }
+        if(!_dgDate(m.available_from)){
+          return _dgBadL('10', 'PEER_AVAILABLE_FROM_NOT_DATE:' + mid);
+        }
+        /* PIT：不得使用尚未公开的数据 */
+        if(m.available_from > asOf){
+          return _dgBadL('10', 'PEER_FUTURE_TRACE:' + mid);
+        }
+      }
+      if(_dgHas(m.direction) && !_dgIn(m.direction, DIAG_LEGAL.direction)){
+        return _dgBadL('08', 'ILLEGAL_DIRECTION:' + mid);
+      }
+      if(_dgStr(m.industry_aggregate_available_from) &&
+         m.industry_aggregate_available_from > asOf){
+        return _dgBadL('10', 'INDUSTRY_FUTURE_TRACE:' + mid);
+      }
+      /* 数据期不得被当成公开发布日 */
+      if(_dgHas(m.industry_aggregate_data_period) &&
+         _dgHas(m.industry_aggregate_official_publication_date) &&
+         m.industry_aggregate_data_period ===
+           m.industry_aggregate_official_publication_date){
+        return _dgBadL('10', 'DATA_PERIOD_REUSED_AS_PUBLICATION_DATE:' + mid);
+      }
+      /* coverage 必须与 n_valid / universe 自洽，禁止宣称满覆盖却缺行 */
+      if(_dgNum(nv) && _dgNum(cp)){
+        var expCp = 100 * nv / cm.primary_universe_n;
+        if(Math.abs(cp - expCp) > 0.5){
+          return _dgBadL('12', 'COVERAGE_PCT_INCONSISTENT_WITH_N_VALID:' + mid);
+        }
+      }
+      if(m.coverage_status === 'SUFFICIENT'){
+        if(!_dgHas(m.cmb_value) || !_dgHas(m.peer_median) ||
+           !_dgHas(m.rank) || !_dgHas(m.percentile)){
+          return _dgBadL('06', 'PARTIAL_SUFFICIENT_METRIC:' + mid);
+        }
+        if(!_dgNum(m.cmb_value) || !_dgNum(m.peer_median)){
+          return _dgBadL('07', 'SUFFICIENT_VALUE_NOT_FINITE:' + mid);
+        }
+        /* SUFFICIENT 时四分位是真必填，不允许 null 蒙混过关 */
+        if(!_dgNum(m.peer_p25) || !_dgNum(m.peer_p75)){
+          return _dgBadL('06', 'QUARTILE_REQUIRED_WHEN_SUFFICIENT:' + mid);
+        }
+        if(!_dgNum(nv) || nv < DIAG_PINNED.min_peers){
+          return _dgBadL('12', 'PEER_COUNT_BELOW_GATE:' + mid);
+        }
+        if(!_dgNum(cp) || cp < DIAG_PINNED.min_coverage_pct){
+          return _dgBadL('12', 'COVERAGE_PCT_BELOW_GATE:' + mid);
+        }
+        if(!_dgNum(m.rank) || !_dgNum(m.percentile)){
+          return _dgBadL('07', 'RANK_OR_PERCENTILE_NOT_NUMERIC:' + mid);
+        }
+        /* rank 上界 = n_valid + 1（n_valid 家同行 + 招商银行） */
+        if(m.rank < 1 || m.rank > nv + 1){
+          return _dgBadL('12', 'RANK_OUT_OF_RANGE:' + mid);
+        }
+        if(m.percentile < 0 || m.percentile > 100){
+          return _dgBadL('12', 'PERCENTILE_OUT_OF_RANGE:' + mid);
+        }
+        if(m.peer_p25 > m.peer_median + 1e-9){
+          return _dgBadL('12', 'QUARTILE_ORDER_VIOLATION_P25_GT_MEDIAN:' + mid);
+        }
+        if(m.peer_median > m.peer_p75 + 1e-9){
+          return _dgBadL('12', 'QUARTILE_ORDER_VIOLATION_MEDIAN_GT_P75:' + mid);
+        }
+      }else{
+        /* 不足覆盖 / 不可比 -> 一律不得给出排名统计 */
+        if(_dgHas(m.rank)){
+          return _dgBadL('12', 'RANK_WITHOUT_SUFFICIENT_COVERAGE:' + mid);
+        }
+        if(_dgHas(m.percentile)){
+          return _dgBadL('12', 'PERCENTILE_WITHOUT_SUFFICIENT_COVERAGE:' + mid);
+        }
+      }
+
+      /* ---- F01 内块（L05 / L06 / L12） ---- */
+      if(mid === 'F01'){
+        var fh = m.public_regulatory_headroom;
+        if(!_dgObj(fh)){ return _dgBadL('05', 'F01_HEADROOM_BLOCK_NOT_OBJECT'); }
+        var FHREQ = ['peer_rows','excluded_peers','regulatory_requirement_pit',
+                     'comparable_peer_count','n_valid','coverage_pct',
+                     'min_peers_gate','min_coverage_pct_gate','comparison_semantics'];
+        for(var z=0;z<FHREQ.length;z++){
+          if(!_dgHas(fh[FHREQ[z]])){
+            return _dgBadL('06', 'MISSING_F01_FIELD:' + FHREQ[z]);
+          }
+        }
+        if(!_dgArr(fh.peer_rows)){ return _dgBadL('05', 'F01_PEER_ROWS_NOT_ARRAY'); }
+        if(!_dgArr(fh.excluded_peers)){
+          return _dgBadL('05', 'F01_EXCLUDED_PEERS_NOT_ARRAY');
+        }
+        if(!_dgObj(fh.regulatory_requirement_pit) ||
+           !_dgArr(fh.regulatory_requirement_pit.records)){
+          return _dgBadL('05', 'F01_REGULATORY_PIT_NOT_OBJECT_WITH_RECORDS');
+        }
+        if(!_dgNum(fh.n_valid)){ return _dgBadL('07', 'F01_N_VALID_NOT_NUMERIC'); }
+        if(!_dgNumOrNull(fh.coverage_pct)){
+          return _dgBadL('07', 'F01_COVERAGE_PCT_NOT_NUMERIC');
+        }
+        if(!_dgNum(fh.comparable_peer_count)){
+          return _dgBadL('07', 'F01_COMPARABLE_PEER_COUNT_NOT_NUMERIC');
+        }
+        if(fh.n_valid !== m.n_valid){
+          return _dgBadL('12', 'F01_N_VALID_INCONSISTENT_WITH_PARENT');
+        }
+        if(_dgNum(fh.coverage_pct) && _dgNum(m.coverage_pct) &&
+           Math.abs(fh.coverage_pct - m.coverage_pct) > 1e-9){
+          return _dgBadL('12', 'F01_COVERAGE_PCT_INCONSISTENT_WITH_PARENT');
+        }
+        if(fh.comparable_peer_count < 0 ||
+           fh.comparable_peer_count > cm.primary_universe_n){
+          return _dgBadL('12', 'F01_COMPARABLE_PEER_COUNT_OUT_OF_RANGE');
+        }
+        /* 内块阈值同样由 Contract 固定 */
+        if(fh.min_peers_gate !== DIAG_PINNED.min_peers){
+          return _dgBadL('06', 'F01_MIN_PEERS_GATE_TAMPERED');
+        }
+        if(fh.min_coverage_pct_gate !== DIAG_PINNED.min_coverage_pct){
+          return _dgBadL('06', 'F01_MIN_COVERAGE_PCT_GATE_TAMPERED');
+        }
+        if(fh.comparison_semantics !== 'PUBLIC_REGULATORY_HEADROOM'){
+          return _dgBadL('08', 'F01_COMPARISON_SEMANTICS_MISMATCH');
+        }
+        /* 同行行：bank 唯一、可得日不得在未来 */
+        var bseen = {};
+        for(var r=0;r<fh.peer_rows.length;r++){
+          var row = fh.peer_rows[r] || {};
+          if(!_dgStr(row.bank)){
+            return _dgBadL('06', 'F01_PEER_ROW_BANK_MISSING');
+          }
+          if(bseen[row.bank] === 1){
+            return _dgBadL('17', 'F01_DUPLICATE_BANK_ROW:' + row.bank);
+          }
+          bseen[row.bank] = 1;
+          var af = row.cet1_available_from;
+          if(_dgHas(af)){
+            if(!_dgDate(af)){
+              return _dgBadL('10', 'F01_ROW_AVAILABLE_FROM_NOT_DATE:' + row.bank);
+            }
+            if(af > asOf){
+              return _dgBadL('10', 'F01_ROW_FUTURE_TRACE:' + row.bank);
+            }
+          }
+          var raf = row.reported_cet1_available_from;
+          if(_dgHas(raf)){
+            if(!_dgDate(raf)){
+              return _dgBadL('10', 'F01_ROW_REPORTED_AVAILABLE_FROM_NOT_DATE:' + row.bank);
+            }
+            if(raf > asOf){
+              return _dgBadL('10', 'F01_ROW_REPORTED_FUTURE_TRACE:' + row.bank);
+            }
+          }
+          var qaf = row.requirement_available_from;
+          if(_dgHas(qaf)){
+            if(!_dgDate(qaf)){
+              return _dgBadL('10', 'F01_ROW_REQUIREMENT_AVAILABLE_FROM_NOT_DATE:' + row.bank);
+            }
+            if(qaf > asOf){
+              return _dgBadL('10', 'F01_ROW_REQUIREMENT_FUTURE_TRACE:' + row.bank);
+            }
+          }
+        }
+        /* 次级原始比率轴：口径与单位必须与主安全垫轴分离 */
+        var rs2 = m.raw_cet1_secondary;
+        if(_dgHas(rs2)){
+          if(!_dgObj(rs2)){ return _dgBadL('05', 'F01_SECONDARY_NOT_OBJECT'); }
+          if(rs2.semantics !== 'RAW_CET1__SECONDARY_DIAGNOSTIC_ONLY'){
+            return _dgBadL('08', 'F01_SECONDARY_SEMANTICS_MISMATCH');
+          }
+          if(rs2.unit !== '%'){
+            return _dgBadL('09', 'F01_SECONDARY_UNIT_MISMATCH');
+          }
+          if(!_dgNum(rs2.cmb_raw_cet1)){
+            return _dgBadL('07', 'F01_SECONDARY_CMB_VALUE_NOT_NUMERIC');
+          }
+          if(!_dgNum(rs2.n_valid)){
+            return _dgBadL('07', 'F01_SECONDARY_N_VALID_NOT_NUMERIC');
+          }
+          if(!_dgNumOrNull(rs2.peer_raw_cet1_median)){
+            return _dgBadL('07', 'F01_SECONDARY_MEDIAN_NOT_FINITE');
+          }
+          if(!_dgNumOrNull(rs2.peer_raw_cet1_rank)){
+            return _dgBadL('07', 'F01_SECONDARY_RANK_NOT_FINITE');
+          }
+          if(_dgNum(rs2.peer_raw_cet1_rank) &&
+             (rs2.peer_raw_cet1_rank < 1 ||
+              rs2.peer_raw_cet1_rank > rs2.n_valid + 1)){
+            return _dgBadL('12', 'F01_SECONDARY_RANK_OUT_OF_RANGE');
+          }
+          if(!_dgNumOrNull(rs2.peer_raw_cet1_percentile)){
+            return _dgBadL('07', 'F01_SECONDARY_PERCENTILE_NOT_FINITE');
+          }
+          if(_dgNum(rs2.peer_raw_cet1_percentile) &&
+             (rs2.peer_raw_cet1_percentile < 0 ||
+              rs2.peer_raw_cet1_percentile > 100)){
+            return _dgBadL('12', 'F01_SECONDARY_PERCENTILE_OUT_OF_RANGE');
+          }
+        }
+      }
+    }
+    for(var s=0;s<DIAG_LEGAL.metric_ids.length;s++){
+      if(!seen[DIAG_LEGAL.metric_ids[s]]){
+        return _dgBadL('11', 'MISSING_PEER_METRIC_ROW:' + DIAG_LEGAL.metric_ids[s]);
+      }
+    }
+
+    /* ---------- L12b relative_aggregate_gate ---------- */
+    var rg = d.relative_aggregate_gate;
+    if(!_dgIn(rg.status, DIAG_LEGAL.relative_aggregate_status)){
+      return _dgBadL('08', 'ILLEGAL_RELATIVE_AGGREGATE_STATUS');
+    }
+    if(rg.threshold_downgraded !== false){
+      return _dgBadL('18', 'RELATIVE_GATE_THRESHOLD_DOWNGRADED');
+    }
+    /* 阈值由 Contract 固定，payload 无权下调 */
+    if(rg.threshold_pct !== DIAG_PINNED.relative_threshold_pct){
+      return _dgBadL('06', 'RELATIVE_THRESHOLD_TAMPERED');
+    }
+    if(!_dgNum(rg.eligible_weight_coverage_pct) ||
+       rg.eligible_weight_coverage_pct <= 0 ||
+       rg.eligible_weight_coverage_pct > 100){
+      return _dgBadL('12', 'RELATIVE_ELIGIBLE_COVERAGE_INVALID');
+    }
+    /* status 必须与阈值自洽：达标才允许 PUBLISHED */
+    var eligibleOk = rg.eligible_weight_coverage_pct >= DIAG_PINNED.relative_threshold_pct;
+    if(rg.status === 'PUBLISHED' && !eligibleOk){
+      return _dgBadL('12', 'RELATIVE_PUBLISHED_BELOW_THRESHOLD');
+    }
+    if(rg.status !== 'PUBLISHED' && eligibleOk){
+      return _dgBadL('12', 'RELATIVE_SUPPRESSED_ABOVE_THRESHOLD');
+    }
+    if(rg.status === 'PUBLISHED' && !_dgNum(rg.relative_quality_index)){
+      return _dgBadL('06', 'RELATIVE_INDEX_MISSING_WHILE_PUBLISHED');
+    }
+    if(rg.status !== 'PUBLISHED' && _dgHas(rg.relative_quality_index)){
+      return _dgBadL('12', 'RELATIVE_INDEX_PRESENT_WHILE_SUPPRESSED');
+    }
+
+    /* ---------- L14 banking_regime ---------- */
+    var br = d.banking_regime;
+    if(br.is_formal_score !== false){
+      return _dgBadL('14', 'REGIME_MUST_NOT_BE_FORMAL_SCORE');
+    }
+    /* 顶层 regime status 是「裁决结论 token」，不是 per-metric 的发布状态枚举；
+       因此不能拿 regime_status 去硬套，而是要求它与 per-metric 分类自洽：
+         * 必须是大写 token 串（冻结语法）；
+         * 必须出现至少一个已发布的 regime 家族 token；
+         * 家族数 >= 2 时必须带 MIXED_REGIME 标记。
+       这样既不会误伤真实结论串，也能拦住任意编造值。 */
+    if(!_dgStr(br.status)){ return _dgBadL('14', 'REGIME_TOP_STATUS_MISSING'); }
+    if(!/^[A-Z0-9_]{8,}$/.test(br.status)){
+      return _dgBadL('14', 'REGIME_TOP_STATUS_ILLEGAL_TOKEN');
+    }
+    var rms = br.metrics;
+    if(!_dgArr(rms) || !rms.length){ return _dgBadL('06', 'REGIME_METRICS_EMPTY'); }
+    var rseen = {};
+    var fam = {};
+    for(var b=0;b<rms.length;b++){
+      var rm = rms[b] || {};
+      if(!_dgIn(rm.metric_id, DIAG_LEGAL.metric_ids)){
+        return _dgBadL('08', 'ILLEGAL_REGIME_METRIC_ID:' + String(rm.metric_id));
+      }
+      if(rseen[rm.metric_id] === 1){
+        return _dgBadL('17', 'DUPLICATE_REGIME_METRIC:' + rm.metric_id);
+      }
+      rseen[rm.metric_id] = 1;
+      if(!_dgIn(rm.status, DIAG_LEGAL.regime_status)){
+        return _dgBadL('08', 'ILLEGAL_REGIME_STATUS:' + rm.metric_id);
+      }
+      if(rm.status === 'PUBLISHED'){
+        if(!_dgIn(rm.regime_classification, DIAG_LEGAL.regime_class)){
+          return _dgBadL('08', 'ILLEGAL_REGIME_CLASSIFICATION:' + rm.metric_id);
+        }
+        if(rm.regime_classification === 'NEUTRAL_MIXED'){
+          fam.NEUTRAL_MIXED = 1;
+        }else if(rm.regime_classification === 'TAILWIND' ||
+                 rm.regime_classification === 'STRONG_TAILWIND'){
+          fam.TAILWIND = 1;
+        }else if(rm.regime_classification === 'HEADWIND' ||
+                 rm.regime_classification === 'STRONG_HEADWIND'){
+          fam.HEADWIND = 1;
+        }
+        if(!_dgNum(rm.peer_n) || rm.peer_n < 0){
+          return _dgBadL('07', 'REGIME_PEER_N_INVALID:' + rm.metric_id);
+        }
+        if(!_dgNum(rm.regime_z)){
+          return _dgBadL('07', 'REGIME_Z_NOT_NUMERIC:' + rm.metric_id);
+        }
+      }
+    }
+    var fams = Object.keys(fam);
+    if(fams.length){
+      var hit = false;
+      for(var fm=0; fm<fams.length; fm++){
+        if(br.status.indexOf(fams[fm]) >= 0){ hit = true; break; }
+      }
+      if(!hit){
+        return _dgBadL('14', 'REGIME_TOP_STATUS_INCONSISTENT_WITH_METRICS');
+      }
+      if(fams.length >= 2 && br.status.indexOf('MIXED_REGIME') < 0){
+        return _dgBadL('14', 'REGIME_TOP_STATUS_MUST_BE_MIXED');
+      }
+    }
+
+    /* ---------- L13 attribution ---------- */
+    var at = d.attribution;
+    var per = at.periods;
+    if(!_dgObj(per)){ return _dgBadL('05', 'ATTRIBUTION_PERIODS_NOT_OBJECT'); }
+    var pk = Object.keys(per);
+    if(!pk.length){ return _dgBadL('13', 'ATTRIBUTION_PERIODS_EMPTY'); }
+    for(var c=0;c<pk.length;c++){
+      if(DIAG_LEGAL.period_keys.indexOf(pk[c]) < 0){
+        return _dgBadL('08', 'ILLEGAL_ATTRIBUTION_PERIOD_KEY:' + pk[c]);
+      }
+      var pp = per[pk[c]] || {};
+      if(pp.identity_pass !== true){
+        return _dgBadL('13', 'ATTRIBUTION_IDENTITY_FAIL:' + pk[c]);
+      }
+      if(!_dgNum(pp.quality_delta)){
+        return _dgBadL('07', 'ATTRIBUTION_DELTA_NOT_NUMERIC:' + pk[c]);
+      }
+      if(!_dgNum(pp.quality_from) || !_dgNum(pp.quality_to)){
+        return _dgBadL('07', 'ATTRIBUTION_ANCHOR_NOT_NUMERIC:' + pk[c]);
+      }
+      if(Math.abs((pp.quality_to - pp.quality_from) - pp.quality_delta) > 1e-6){
+        return _dgBadL('13', 'ATTRIBUTION_DELTA_INCONSISTENT:' + pk[c]);
+      }
+      if(pp.to_date !== asOf){
+        return _dgBadL('13', 'ATTRIBUTION_TO_DATE_MISMATCH:' + pk[c]);
+      }
+      var md = pp.member_delta;
+      if(!_dgObj(md)){ return _dgBadL('05', 'ATTRIBUTION_MEMBER_DELTA_NOT_OBJECT:' + pk[c]); }
+      var mk = Object.keys(md);
+      if(mk.length !== DIAG_LEGAL.metric_ids.length){
+        return _dgBadL('13', 'ATTRIBUTION_MEMBER_COUNT_MISMATCH:' + pk[c]);
+      }
+      var msum = 0, zeroMembers = 0;
+      for(var e=0;e<mk.length;e++){
+        if(DIAG_LEGAL.metric_ids.indexOf(mk[e]) < 0){
+          return _dgBadL('08', 'ILLEGAL_ATTRIBUTION_MEMBER:' + mk[e]);
+        }
+        if(!_dgNum(md[mk[e]])){
+          return _dgBadL('07', 'ATTRIBUTION_MEMBER_NOT_NUMERIC:' + mk[e]);
+        }
+        if(md[mk[e]] === 0) zeroMembers++;
+        msum += md[mk[e]];
+      }
+      /* 成员集合冻结且不得缺项 / 多项（上面已按长度 + 合法性双向覆盖） */
+      for(var e2=0;e2<DIAG_LEGAL.metric_ids.length;e2++){
+        if(!_dgNum(md[DIAG_LEGAL.metric_ids[e2]])){
+          return _dgBadL('13', 'ATTRIBUTION_MEMBER_MISSING:' +
+                          DIAG_LEGAL.metric_ids[e2]);
+        }
+      }
+      if(Math.abs(msum - pp.quality_delta) > 1e-6){
+        return _dgBadL('13', 'ATTRIBUTION_MEMBER_SUM_INCONSISTENT:' + pk[c]);
+      }
+      /* 零贡献成员必须存在：缺失说明成员集合被裁剪过 */
+      if(zeroMembers < 1){
+        return _dgBadL('13', 'ATTRIBUTION_ZERO_MEMBER_MISSING:' + pk[c]);
+      }
+    }
+    /* baseline_default 是描述性基准串（含基准日），不是周期键 */
+    if(!_dgStr(at.baseline_default)){
+      return _dgBadL('06', 'ATTRIBUTION_BASELINE_DEFAULT_MISSING');
+    }
+    if(at.causal_claim !== false){
+      return _dgBadL('13', 'ATTRIBUTION_MUST_NOT_CLAIM_CAUSALITY');
+    }
+    var td = at.top_drivers || {};
+    if(td.source !== 'PRECOMPUTED_PAYLOAD'){
+      return _dgBadL('13', 'ATTRIBUTION_DRIVER_SOURCE_NOT_PRECOMPUTED');
+    }
+    var sides = ['top_negative','top_positive'];
+    for(var sd=0; sd<sides.length; sd++){
+      var arr = td[sides[sd]] || [];
+      if(!_dgArr(arr)){ return _dgBadL('05', 'ATTRIBUTION_DRIVER_NOT_ARRAY'); }
+      for(var f=0;f<arr.length;f++){
+        if(DIAG_LEGAL.metric_ids.indexOf(arr[f].metric_id) < 0){
+          return _dgBadL('08', 'ILLEGAL_ATTRIBUTION_DRIVER:' + String(arr[f].metric_id));
+        }
+        if(!_dgNum(arr[f].delta_earned_points)){
+          return _dgBadL('07', 'ATTRIBUTION_DRIVER_NOT_NUMERIC');
+        }
+      }
+    }
+
+    /* ---------- L15 / L16 industry_aggregate_trace ---------- */
+    var tr = d.industry_aggregate_trace;
+    if(!tr.length){ return _dgBadL('06', 'INDUSTRY_TRACE_EMPTY'); }
+    var IREQ = ['metric_id','admission_status','period_is_not_available_from',
+                'official_publication_date','available_from','data_period',
+                'pit_admissible','unit','value','official_source_url',
+                'official_source_title','publisher','pit_rule'];
+    var tseen = {};
+    for(var g=0;g<tr.length;g++){
+      var tc = tr[g] || {};
+      if(!_dgObj(tc)){ return _dgBadL('05', 'INDUSTRY_TRACE_ROW_NOT_OBJECT'); }
+      for(var y=0;y<IREQ.length;y++){
+        if(!_dgHas(tc[IREQ[y]])){
+          return _dgBadL('06', 'MISSING_INDUSTRY_FIELD:' + IREQ[y]);
+        }
+      }
+      if(!_dgIn(tc.metric_id, DIAG_LEGAL.metric_ids)){
+        return _dgBadL('08', 'ILLEGAL_INDUSTRY_TRACE_METRIC:' + String(tc.metric_id));
+      }
+      if(tseen[tc.metric_id] === 1){
+        return _dgBadL('17', 'DUPLICATE_INDUSTRY_TRACE_METRIC:' + tc.metric_id);
+      }
+      tseen[tc.metric_id] = 1;
+      if(!_dgIn(tc.admission_status, DIAG_LEGAL.admission_status)){
+        return _dgBadL('08', 'ILLEGAL_ADMISSION_STATUS:' + tc.metric_id);
+      }
+      if(tc.period_is_not_available_from !== true){
+        return _dgBadL('15', 'DATA_PERIOD_REUSED_AS_AVAILABLE_FROM:' + tc.metric_id);
+      }
+      if(!_dgIn(tc.unit, DIAG_LEGAL.industry_unit)){
+        return _dgBadL('09', 'ILLEGAL_INDUSTRY_UNIT:' + tc.metric_id);
+      }
+      if(!_dgDate(tc.official_publication_date) || !_dgDate(tc.available_from) ||
+         !_dgDate(tc.data_period)){
+        return _dgBadL('10', 'INDUSTRY_DATE_MALFORMED:' + tc.metric_id);
+      }
+      /* 双闸：发布闸 AND 可得闸，两者都必须成立 */
+      if(tc.available_from > asOf){
+        return _dgBadL('15', 'INDUSTRY_FUTURE_AVAILABLE_FROM:' + tc.metric_id);
+      }
+      if(tc.official_publication_date > asOf){
+        return _dgBadL('15', 'INDUSTRY_FUTURE_PUBLICATION:' + tc.metric_id);
+      }
+      /* 准入发生在聚合之前：未准入 / PIT 不成立 -> 不得带值 */
+      var admitted = (tc.admission_status === 'ADMITTED') &&
+                     (tc.pit_admissible === true);
+      if(!admitted){
+        if(_dgHas(tc.value) && tc.value !== null){
+          return _dgBadL('15', 'PRE_PUBLICATION_VALUE_LEAK:' + tc.metric_id);
+        }
+      }else{
+        if(!_dgNum(tc.value)){
+          return _dgBadL('07', 'INDUSTRY_VALUE_NOT_NUMERIC:' + tc.metric_id);
+        }
+      }
+      if(tc.pit_admissible === true && tc.admission_status !== 'ADMITTED'){
+        return _dgBadL('15', 'ADMISSION_STATUS_INCONSISTENT:' + tc.metric_id);
+      }
+      if(!_dgStr(tc.official_source_url) || !_dgStr(tc.official_source_title) ||
+         !_dgStr(tc.publisher)){
+        return _dgBadL('16', 'INDUSTRY_SOURCE_TRACE_INCOMPLETE:' + tc.metric_id);
+      }
+    }
+
+    /* ---------- L16 source_freshness ---------- */
+    var sf = d.source_freshness;
+    var SREQ = ['peer_data_as_of','industry_aggregate_available_from',
+                'industry_aggregate_official_publication_date',
+                'industry_aggregate_period','industry_aggregate_source_url',
+                'industry_aggregate_source_class','update_trigger'];
+    for(var z2=0;z2<SREQ.length;z2++){
+      if(!_dgHas(sf[SREQ[z2]])){
+        return _dgBadL('06', 'MISSING_SOURCE_FRESHNESS_FIELD:' + SREQ[z2]);
+      }
+    }
+    if(!_dgArr(sf.update_trigger) || !sf.update_trigger.length){
+      return _dgBadL('06', 'SOURCE_FRESHNESS_TRIGGER_EMPTY');
+    }
+    if(sf.peer_data_as_of > asOf){
+      return _dgBadL('10', 'PEER_DATA_AS_OF_IN_FUTURE');
+    }
+    if(sf.industry_aggregate_available_from > asOf){
+      return _dgBadL('10', 'INDUSTRY_AVAILABLE_FROM_IN_FUTURE');
+    }
+    if(sf.industry_aggregate_official_publication_date > asOf){
+      return _dgBadL('10', 'INDUSTRY_PUBLICATION_IN_FUTURE');
+    }
+    if(sf.industry_aggregate_period === sf.industry_aggregate_available_from){
+      return _dgBadL('10', 'INDUSTRY_PERIOD_REUSED_AS_AVAILABLE_FROM');
+    }
+
+    /* ---------- L17 哈希一致性 ---------- */
+    if(!DIAG_SHA_RE.test(String(d.diagnostic_contract_sha256))){
+      return _dgBadL('17', 'DIAGNOSTIC_CONTRACT_SHA_MALFORMED');
+    }
+    if(!DIAG_SHA_RE.test(String(d.diagnostic_payload_sha256))){
+      return _dgBadL('17', 'DIAGNOSTIC_PAYLOAD_SHA_MALFORMED');
+    }
+    if(_dgStr(exp.diagnostic_contract_sha256) &&
+       d.diagnostic_contract_sha256 !== exp.diagnostic_contract_sha256){
+      return _dgBadL('17', 'DIAGNOSTIC_CONTRACT_SHA_MISMATCH_VS_VIEW');
+    }
+    if(_dgStr(exp.diagnostic_payload_sha256) &&
+       d.diagnostic_payload_sha256 !== exp.diagnostic_payload_sha256){
+      return _dgBadL('17', 'DIAGNOSTIC_PAYLOAD_SHA_MISMATCH_VS_VIEW');
+    }
+
+    /* ---------- L07 / L18 unverified_metrics + display_map ---------- */
+    var um = d.unverified_metrics;
+    for(var u=0;u<um.length;u++){
+      if(DIAG_LEGAL.metric_ids.indexOf(um[u]) < 0){
+        return _dgBadL('08', 'ILLEGAL_UNVERIFIED_METRIC:' + String(um[u]));
+      }
+    }
+    var dmp = d.display_map_diag;
+    if(!_dgObj(dmp) || !Object.keys(dmp).length){
+      return _dgBadL('06', 'DISPLAY_MAP_EMPTY');
+    }
+
+    return {ok:true, reason:null, policy:DIAG_PIPELINE_VERSION};
+  }
+
+  /* ---- 传输 + 解析 + 校验一站式入口（浏览器 fetch 路径使用） ---------- */
+  function diagValidateText(text, httpOk, view){
+    if(!httpOk){ return _dgBadL('01', 'HTTP_NOT_OK'); }
+    var p = diagParsePayload(text);
+    if(!p.ok){ return _dgBad('L02_' + p.reason); }
+    return diagValidate(p.value, view);
+  }
+
+  window.__CMB_VALIDATE_DIAGNOSTIC__ = diagValidate;
+  window.__CMB_VALIDATE_DIAGNOSTIC_TEXT__ = diagValidateText;
+  window.__CMB_PARSE_DIAGNOSTIC_PAYLOAD__ = diagParsePayload;
+  window.__CMB_DIAG_VALIDATOR_VERSION__ = DIAG_PIPELINE_VERSION;
+  window.__CMB_DIAG_PIPELINE_VERSION__ = DIAG_PIPELINE_VERSION;
+  window.__CMB_DIAG_PIPELINE_LAYERS__ = DIAG_PIPELINE_LAYERS;
+  window.__CMB_DIAG_LEGAL__ = DIAG_LEGAL;
+
+  function renderV4Diagnostic(){
+    var host1 = document.getElementById('v4-diag-chips');
+    var host2 = document.getElementById('v4-diag-detail');
+    if(!host1 || !host2) return;
+    diagLoadMap();
+    /* F002 —— 渲染前防御性复校（只校验，不重算） */
+    var _vd = window.__CMB_VALIDATE_DIAGNOSTIC__
+      ? window.__CMB_VALIDATE_DIAGNOSTIC__(DATA && DATA.quality_diagnostic_data, DATA)
+      : {ok: !!(DATA && DATA.quality_diagnostic_data)};
+    var qd = _vd.ok ? DATA.quality_diagnostic_data : null;
+
+    /* ---- Fail-Closed（PART AK / PART AL / F002-G）---- */
+    if(!qd){
+      host1.innerHTML = diagChip('质量诊断', '数据暂不可用');
+      host2.innerHTML = '';
+      return;
+    }
+
+    var reg = qd.banking_regime || {};
+    var moat = qd.moat_status || {};
+    var attr = qd.attribution || {};
+    var base = (attr.periods || {}).SINCE_2021_BASELINE || {};
+
+    /* ---- 三枚摘要 chip ---- */
+    host1.innerHTML =
+      diagChip('行业环境', esc(reg.public_zh || GLYPH)) +
+      diagChip('竞争优势', esc(moat.public_zh || GLYPH)) +
+      diagChip('评分变化',
+        (base.quality_delta === null || base.quality_delta === undefined)
+          ? GLYPH
+          : ('自 2021 基准 ' + (base.quality_delta > 0 ? '+' : '') +
+             diagNum(base.quality_delta, 2)));
+
+    /* ---- 展开区 ---- */
+    var h = [];
+
+    /* ① 变化归因 */
+    h.push('<details class="diag-d"><summary>① 评分变化归因</summary>');
+    h.push('<div class="diag-note">以下为「评分变化贡献」，不是因果关系判断。</div>');
+    var td = attr.top_drivers || {};
+    var neg = td.top_negative || [], pos = td.top_positive || [];
+    h.push('<div class="diag-sub">主要负贡献</div>');
+    h.push(neg.length ? neg.map(function(x){
+      return diagRow([esc(x.metric_name_zh),
+        (x.delta_earned_points > 0 ? '+' : '') + diagNum(x.delta_earned_points, 2)]);
+    }).join('') : '<div class="diag-note">' + GLYPH + '</div>');
+    h.push('<div class="diag-sub">主要正贡献</div>');
+    h.push(pos.length ? pos.map(function(x){
+      return diagRow([esc(x.metric_name_zh),
+        (x.delta_earned_points > 0 ? '+' : '') + diagNum(x.delta_earned_points, 2)]);
+    }).join('') : '<div class="diag-note">' + GLYPH + '</div>');
+    var per = attr.periods || {};
+    Object.keys(per).forEach(function(k){
+      var p = per[k] || {};
+      var nm = {'SINCE_2021_BASELINE': '自 2021 基准',
+                'LAST_3_YEARS': '近三年', 'LAST_1_YEAR': '近一年'}[k] || k;
+      h.push(diagRow([esc(nm),
+        (p.quality_delta === null || p.quality_delta === undefined)
+          ? GLYPH
+          : ((p.quality_delta > 0 ? '+' : '') + diagNum(p.quality_delta, 2))]));
+    });
+    h.push('</details>');
+
+    /* ② 同行比较 */
+    h.push('<details class="diag-d"><summary>② 同行比较</summary>');
+    h.push('<div class="diag-note">比较对象为 8 家全国性股份制商业银行；' +
+           '招商银行不参与同行中位数计算。</div>');
+
+    /* ---- F001-J —— F01 主口径 = 公开监管资本安全垫 -------------------- */
+    var f01 = null;
+    (qd.peer_metrics || []).forEach(function(m){
+      if(m.metric_id === 'F01') f01 = m;
+    });
+    if(f01){
+      var fh = f01.public_regulatory_headroom || {};
+      var fr = f01.raw_cet1_secondary || {};
+      /* RC V11 / F001 —— 安全垫主口径只有在「可比同行数量 + 覆盖率」都过闸
+         时才发布；否则只公开说明为什么不发布，绝不退回 Raw CET1 冒充主排名，
+         也绝不把 UNKNOWN 口径粉饰成 AVAILABLE。 */
+      var hrOk = (f01.f01_peer_primary_status ===
+                  'PUBLISHED_PUBLIC_REGULATORY_HEADROOM') &&
+                 (fh.cmb_public_headroom !== null &&
+                  fh.cmb_public_headroom !== undefined);
+      h.push('<div class="diag-sub">公开监管资本安全垫</div>');
+      if(hrOk){
+        h.push('<div class="diag-note">资本安全垫 = 核心一级资本充足率 ' +
+               '减 公开适用监管要求，单位为个百分点。</div>');
+        h.push('<div class="diag-row diag-head" role="row">' +
+          ['口径', '招商银行', '同行中位数', '同行位置'].map(function(t){
+            return '<span role="columnheader">' + esc(t) + '</span>';
+          }).join('') + '</div>');
+        var fpos = (fh.peer_headroom_rank === null || fh.peer_headroom_rank === undefined)
+          ? GLYPH : ('第 ' + diagNum(fh.peer_headroom_rank, 0) + ' / ' +
+                     diagNum((fh.n_valid || 0) + 1, 0));
+        h.push('<div class="diag-row" role="row">' +
+          '<span>资本安全垫</span>' +
+          '<span>' + diagNum(fh.cmb_public_headroom, 2) + ' 个百分点</span>' +
+          '<span>' + diagNum(fh.peer_headroom_median, 2) + '</span>' +
+          '<span>' + fpos + '</span></div>');
+        h.push('<div class="diag-note">非公开的第二支柱要求与真实总监管要求' +
+               '仍然未知，因此这里比较的是公开口径资本安全垫，' +
+               '不是真实总监管安全垫。</div>');
+      }else{
+        h.push('<div class="diag-note">' +
+               esc(fh.public_status_zh ||
+                   '部分同行监管口径不可比，本期不提供同行排名') + '</div>');
+        var exl = fh.excluded_peers || [];
+        if(exl.length){
+          h.push('<div class="diag-row diag-wrap">' + exl.map(function(x){
+            return esc(x.bank_name_zh || x.bank) + '（' +
+                   esc(x.reason_zh || '口径不可比') + '）';
+          }).join(' · ') + '</div>');
+        }
+        h.push('<div class="diag-note">不做估算补齐，也不降低可比门槛；' +
+               '因此本期不发布资本安全垫的同行中位数与排名。</div>');
+        h.push('<div class="diag-note">需要说明：非公开的第二支柱要求与真实' +
+               '总监管要求仍然未知，所以即使可比同行足够，这里比较的也只是' +
+               '公开口径资本安全垫，不是真实总监管安全垫。</div>');
+      }
+      /* ---- 原始比率恒为次级参考，单位 %，绝不与安全垫混用同一根轴 ---- */
+      h.push('<div class="diag-sub">原始核心一级资本充足率（次级参考）</div>');
+      h.push('<div class="diag-note">各行计量方法不同（高级法 / 权重法），' +
+             '原始比率不可直接比较，也不能替代上面的资本安全垫，仅作参考。</div>');
+      h.push('<div class="diag-row" role="row">' +
+        '<span>核心一级资本充足率</span>' +
+        '<span>' + diagNum(fr.cmb_raw_cet1, 2) + ' %</span>' +
+        '<span>' + diagNum(fr.peer_raw_cet1_median, 2) + '</span>' +
+        '<span>' + ((fr.peer_raw_cet1_rank === null ||
+                     fr.peer_raw_cet1_rank === undefined) ? GLYPH :
+                    ('第 ' + diagNum(fr.peer_raw_cet1_rank, 0) + ' / ' +
+                     diagNum((fr.n_valid || 0) + 1, 0))) + '</span></div>');
+      /* ---- 行业口径：只有能建立真实可适用的行业监管要求栈时才显示安全垫；
+             否则只显示官方原始比率 ---- */
+      h.push('<div class="diag-sub">行业口径</div>');
+      h.push(diagRow([esc(f01.industry_aggregate_label_zh || '商业银行（官方口径）'),
+        (f01.industry_aggregate === null || f01.industry_aggregate === undefined)
+          ? '行业数据在该日期尚未公开'
+          : (diagNum(f01.industry_aggregate, 2) + ' %')]));
+      h.push('<div class="diag-note">' +
+             esc(f01.industry_headroom_note_zh ||
+                 '行业口径只展示官方原始数据，不构造行业资本安全垫。') + '</div>');
+    }
+
+    var ok = (qd.peer_metrics || []).filter(function(m){
+      return m.coverage_status === 'SUFFICIENT';
+    });
+    var ng = (qd.peer_metrics || []).filter(function(m){
+      return m.coverage_status !== 'SUFFICIENT';
+    });
+    h.push('<div class="diag-table" role="table">');
+    h.push('<div class="diag-row diag-head" role="row">' +
+      ['指标', '招行', '同行中位数', '行业值', '同行位置', '优势变化'].map(function(t){
+        return '<span role="columnheader">' + esc(t) + '</span>';
+      }).join('') + '</div>');
+    ok.forEach(function(m){
+      var posTxt = (m.rank === null || m.rank === undefined)
+        ? GLYPH : ('第 ' + diagNum(m.rank, 0) + ' / ' + diagNum((m.n_valid || 0) + 1, 0));
+      h.push('<div class="diag-row" role="row">' +
+        '<span>' + esc(m.metric_name_zh) + '</span>' +
+        '<span>' + diagNum(m.cmb_value, 2) + esc(m.unit || '') + '</span>' +
+        '<span>' + diagNum(m.peer_median, 2) + '</span>' +
+        '<span>' + (m.industry_aggregate === null || m.industry_aggregate === undefined
+                    ? GLYPH : diagNum(m.industry_aggregate, 2)) + '</span>' +
+        '<span>' + posTxt + '</span>' +
+        '<span>' + esc(m.moat_status_zh || GLYPH) + '</span></div>');
+    });
+    h.push('</div>');
+    if(ng.length){
+      h.push('<div class="diag-sub">暂不横向排名</div>');
+      h.push('<div class="diag-note">' + esc(qd.unverified_public_zh ||
+             '部分银行披露口径不同，当前不做横向排名。') + '</div>');
+      h.push('<div class="diag-row diag-wrap">' + ng.map(function(m){
+        return esc(m.metric_name_zh);
+      }).join(' · ') + '</div>');
+    }
+    var rg = qd.relative_aggregate_gate || {};
+    if(rg.status && rg.status !== 'PUBLISHED'){
+      h.push('<div class="diag-note">同行综合总分：暂不发布' +
+             '（可比指标权重占比不足，不做估算补齐）。</div>');
+    }
+    h.push('</details>');
+
+    /* ③ 行业环境 */
+    h.push('<details class="diag-d"><summary>③ 行业环境</summary>');
+    h.push('<div class="diag-note">描述银行业共同经营环境，不参与评分。</div>');
+    var grp = reg.groups_zh || {};
+    Object.keys(grp).forEach(function(k){
+      h.push(diagRow([esc(k), esc(grp[k])]));
+    });
+    h.push('<div class="diag-sub">分指标方向</div>');
+    (reg.metrics || []).forEach(function(r){
+      if(r.status !== 'PUBLISHED') return;
+      h.push(diagRow([esc(r.metric_name_zh),
+                      esc(r.regime_classification_zh || GLYPH)]));
+    });
+    h.push('<div class="diag-note">「股份行同行中位数」与「银行业整体」为两个不同口径，' +
+           '不合并成一个数值。</div>');
+    h.push('</details>');
+
+    host2.innerHTML = h.join('');
+  }
+
+  /* ④ 五柱历史：五柱共享左轴 0~100，招商银行前复权收盘价走独立右轴（RMB）。
+     缺失日显式断开，绝不前向填充；几何不随勾选变化（右轴留白恒定）。 */
+  function v4Chart(){
+    if(!CH.V4){
+      CH.V4 = setupChart('chartV4', 46);
+      if(CH.V4){
+        /* ④ 专用：十字线与绘制共用缓存几何（ISSUE-07）。 */
+        CH.V4._cachedGeom = true;
+        CH.V4._onHover = function(dt){
+          V4_HOVER = dt;
+          window.__CMB_V4_HOVER_DATE__ = dt;
+          v4HoverStatus();
+        };
+        bindCrosshair(CH.V4, [], []);
+      }
+    }
+    return CH.V4;
+  }
+  function drawV4(d){
+    if(!ISV4) return;
+    var ch = v4Chart();
+    if(!ch) return;
+    var rs = V4RANGE || {s: 0, e: dates.length - 1};
+    if(rs.s < 0) rs.s = 0;
+    if(rs.e >= dates.length) rs.e = dates.length - 1;
+    var rdates = dates.slice(rs.s, rs.e + 1);
+    var se = v4Shown().map(function(x){
+      x.data = (x.data || []).slice(rs.s, rs.e + 1);
+      return x;
+    });
+    /* ISSUE-07 —— 定位日只从 master 交易日轴取，与曲线 / 图例 / Tooltip 同源 */
+    var mi = dates.indexOf(V4_SEL);
+    mi = (mi >= rs.s && mi <= rs.e) ? mi - rs.s : -1;
+    setCrosshairSeries(ch, se, rdates);
+    drawSeries(ch, rdates, se, mi, {min: 0, max: 100});
+    v4Legend();
+    v4RangeStatus();
+    v4HoverStatus();
+  }
+
+  function v4Preset(n){
+    V4RANGE = (!n || n >= dates.length) ? null
+            : {s: dates.length - n, e: dates.length - 1};
+    if(cur) drawV4(cur);
+  }
+
   /* §38 / §39 —— 历史研究日：不得把 Partial 小计冒充正式满分可比模块 */
   function histModuleNote(title, cls, cov){
     var lv = cls==='FULL' ? 'LEVEL-A 正式可比较历史'
@@ -738,6 +2499,8 @@
 
   /* ================= 主渲染 ================= */
   function render(d){
+    /* V4 —— 五柱独立评分走独立渲染路径；V2 / V3 完全不受影响。 */
+    if(ISV4){ renderV4(d); return; }
     var idx = dates.indexOf(d);
     var day = days[d] || null;
     /* §26 —— 逐项明细按年份懒加载；没有就向中性加载器要，绝不自己造数据。 */
@@ -947,11 +2710,15 @@
       return o;
     }
     var all=vals(left), allR=vals(right);
-    var mn = opt && opt.min!=null ? opt.min : 0, mx = opt && opt.max!=null ? opt.max : 100;
-    if(!(opt && opt.min!=null) && all.length){ mn = Math.min.apply(null, all); }
-    if(!(opt && opt.max!=null) && all.length){ mx = Math.max.apply(null, all); }
+    /* RC V3 / F010 —— 固定域评分轴（min/max 由调用方显式钉死）绝不再加 padding：
+       五柱轴必须严格 0 ~ 100，刻度上不允许出现 -8 或 108。
+       只有自适应轴（未钉死域）才保留 8% 视觉留白。 */
+    var fixedDomain = !!(opt && opt.min != null && opt.max != null);
+    var mn = opt && opt.min != null ? opt.min : 0, mx = opt && opt.max != null ? opt.max : 100;
+    if(!(opt && opt.min != null) && all.length){ mn = Math.min.apply(null, all); }
+    if(!(opt && opt.max != null) && all.length){ mx = Math.max.apply(null, all); }
     if(mx-mn < 1e-9){ mx = mn + 1; }
-    var pad2 = (mx-mn)*0.08; mn -= pad2; mx += pad2;
+    if(!fixedDomain){ var pad2 = (mx-mn)*0.08; mn -= pad2; mx += pad2; }
     var mnR = 0, mxR = 1, hasR = allR.length > 0;
     if(hasR){
       mnR = Math.min.apply(null, allR); mxR = Math.max.apply(null, allR);
@@ -969,9 +2736,9 @@
       ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(p.l+W,y); ctx.stroke();
       ctx.textAlign='right'; ctx.fillText(vv.toFixed(1), p.l-6, y+3);
     }
-    /* 右轴刻度（价格 RMB）—— 只画在存在右轴序列的图表上，颜色跟随价格曲线。 */
+    /* 右轴刻度（价格 RMB）—— 只画在存在右轴序列的图表上，颜色跟随该序列自身。 */
     if(hasR){
-      ctx.textAlign='left'; ctx.fillStyle=PRICE_COLOR;
+      ctx.textAlign='left'; ctx.fillStyle=(right[0] && right[0].color) || PRICE_COLOR;
       for(var ri=0; ri<=4; ri++){
         var rv = mnR + (mxR-mnR)*ri/4, ry = Math.round(Y2(rv))+0.5;
         ctx.fillText(Number(rv).toFixed(1), p.l+W+6, ry+3);
@@ -1009,12 +2776,17 @@
     ch.cctx.clearRect(0,0,cg.w,cg.h);
     ch._X = X; ch._Y = Y; ch._Y2 = hasR ? Y2 : null;
     ch._mn = mn; ch._mx = mx; ch._labels = labels;
+    /* ISSUE-07 —— 十字线反查横坐标必须与绘制用的是同一套几何：
+       绘图区宽高与 PAD 在这里一次性缓存，crosshair 只读缓存，绝不另算一份。 */
+    ch._W = W; ch._H = H; ch._p = p; ch._n = labels.length;
   }
   /* §64 —— Tooltip 数值一律走全局数字展示契约（display_map 精确查表），
    * 浏览器绝不自算业务数字。 */
   function tipValue(se, i){
     var v = (se.data||[])[i];
     if(v==null) return GLYPH;
+    /* 右轴人民币序列：只补币种符号，数值本身仍走 display_map 精确查表。 */
+    if(se.money) return '¥ ' + fmt(v,2);
     var o = se.ohlc ? se.ohlc[i] : null;
     if(o && o.open!=null && o.high!=null && o.low!=null && o.close!=null){
       return '开 '+fmt(o.open,2)+' · 高 '+fmt(o.high,2)+' · 低 '+fmt(o.low,2)+' · 收 '+fmt(o.close,2);
@@ -1033,21 +2805,32 @@
     function curLabels(){ return ch._labels || labels; }
     function curSeries(){ return ch._series || series; }
     function idxFrom(e){
-      var r = ch.shell.getBoundingClientRect();
-      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      var p = ch.PAD, W = r.width - p.l - p.r;
-      var n = curLabels().length;
+      /* RC V3 / F009 —— 命中测试与绘图必须是同一套 Canvas 几何。
+         旧代码用 shell 的 bounding rect 作为原点，而曲线用 canvas 的
+         clientWidth 绘制：两者相差 shell 的 border/padding（实测 8.5px），
+         于是 tooltip 与 crosshair 彼此一致（共用同一个已偏移 index），
+         但选中的交易日并不是鼠标下真正画的那一天。
+         现在：原点取 canvas 自己的 rect，绘图区宽度/边距直接复用
+         drawSeries 结束时缓存的 _W / _p / _n，绝不另算一份。 */
+      var rc = ch.cv.getBoundingClientRect();
+      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - rc.left;
+      var p = (ch._p || ch.PAD);
+      var W = (typeof ch._W === 'number') ? ch._W : (rc.width - p.l - p.r);
+      var n = (typeof ch._n === 'number') ? ch._n : curLabels().length;
       var i = Math.round((cx - p.l) / (W / Math.max(1, n-1)));
-      return Math.max(0, Math.min(n-1, i));
+      return Math.max(0, Math.min(Math.max(0, n-1), i));
     }
     function show(i){
-      var r = ch.shell.getBoundingClientRect(), p = ch.PAD, W = r.width-p.l-p.r;
+      /* 竖直参考线一律走绘制缓存下来的 X(i)：线落在哪一天，点就落在哪一天。 */
       var g = ch.geom(ch.cross);
       var ls = curLabels(), ss = curSeries();
       ch.cctx.clearRect(0,0,g.w,g.h);
-      var x = p.l + (W*i/Math.max(1,ls.length-1));
+      var p = (ch._p || ch.PAD);
+      var x = (typeof ch._X === 'function') ? ch._X(i)
+            : (p.l + ((g.w - p.l - p.r) * i / Math.max(1, ls.length-1)));
+      var y1 = (typeof ch._H === 'number') ? (p.t + ch._H) : (p.t + g.h - p.b);
       ch.cctx.strokeStyle='rgba(124,58,237,.5)'; ch.cctx.setLineDash([4,4]);
-      ch.cctx.beginPath(); ch.cctx.moveTo(x,p.t); ch.cctx.lineTo(x,p.t+g.h-p.t-p.b+p.t); ch.cctx.stroke();
+      ch.cctx.beginPath(); ch.cctx.moveTo(x,p.t); ch.cctx.lineTo(x,y1); ch.cctx.stroke();
       ch.cctx.setLineDash([]);
       if(ch._X && ch._Y){
         ss.forEach(function(se){
@@ -1056,7 +2839,7 @@
           var yf = (se.pane==='lower' && ch._YL) ? ch._YL
                  : ((se.axis==='right' && ch._Y2) ? ch._Y2 : ch._Y);
           ch.cctx.fillStyle=se.color; ch.cctx.beginPath();
-          ch.cctx.arc(ch._X(i), yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
+          ch.cctx.arc(x, yf(v), 3.2, 0, Math.PI*2); ch.cctx.fill();
         });
       }
       var rows = ss.map(function(se){
@@ -1064,8 +2847,14 @@
       }).join('');
       ch.tip.innerHTML = '<strong>'+esc(ls[i])+'</strong>'+rows;
       ch.tip.style.display = 'block';
+      /* ISSUE-07 —— 悬停交易日对外只暴露一个：master 轴上的这一格日期。 */
+      if(typeof ch._onHover === 'function') ch._onHover(ls[i], i);
     }
-    function hide(){ ch.cctx && ch.cctx.clearRect(0,0,ch.cross.width,ch.cross.height); ch.tip.style.display='none'; }
+    function hide(){
+      ch.cctx && ch.cctx.clearRect(0,0,ch.cross.width,ch.cross.height);
+      ch.tip.style.display='none';
+      if(typeof ch._onHover === 'function') ch._onHover(null, -1);
+    }
     ch.shell.addEventListener('mousemove', function(e){ show(idxFrom(e)); });
     ch.shell.addEventListener('mouseleave', hide);
     ch.shell.addEventListener('touchstart', function(e){ show(idxFrom(e)); }, {passive:true});
@@ -1246,6 +3035,8 @@
     ch.shell.setAttribute('data-split-height', String(Math.round(HL)));
   }
   function drawAll(d){
+    /* V4 —— 一张五柱历史图（共享 0~100），不画 V2/V3 的任何图表。 */
+    if(ISV4){ drawV4(d); return; }
     var s = buildSeries();
     var r = rangeSlice();
     var rdates = dates.slice(r.s, r.e+1);
@@ -1432,6 +3223,15 @@
   if(el('hist-3y')) el('hist-3y').addEventListener('click', function(){ presetRange(3); });
   if(el('hist-5y')) el('hist-5y').addEventListener('click', function(){ presetRange(5); });
   if(el('hist-all')) el('hist-all').addEventListener('click', function(){ presetRange(0); });
+  /* V4 —— 五柱历史图的 1Y / 3Y / ALL 预设（只改 X 轴区间，不动任何分数） */
+  if(el('v4-hist-1y')) el('v4-hist-1y').addEventListener('click', function(){ v4Preset(252); });
+  if(el('v4-hist-3y')) el('v4-hist-3y').addEventListener('click', function(){ v4Preset(756); });
+  if(el('v4-hist-all')) el('v4-hist-all').addEventListener('click', function(){ v4Preset(0); });
+  /* ISSUE-06 —— 单日定位（previous-or-equal 回退）与区间选择（不静默反转） */
+  if(el('v4-single-apply')) el('v4-single-apply').addEventListener('click', v4Locate);
+  if(el('v4-single-date')) el('v4-single-date').addEventListener('change', v4Locate);
+  if(el('v4-hist-apply')) el('v4-hist-apply').addEventListener('click', v4ApplyRange);
+  if(el('v4-hist-reset')) el('v4-hist-reset').addEventListener('click', v4ResetRange);
   if(el('hist-start')) el('hist-start').addEventListener('change', applyRange);
   if(el('hist-end')) el('hist-end').addEventListener('change', applyRange);
 
@@ -1456,6 +3256,22 @@
   function boot(payload){
     DATA = payload || {};
     MODEL_META = DATA.model_meta || {};
+    /* ---- 三模型分支：V4 = 五柱独立评分，V2 / V3 保持原路径 ---- */
+    ISV4 = MODEL_META.model_id === 'CMB_SCORE_MODEL_V4';
+    V4P = DATA.pillar_meta || [];
+    V4M = DATA.member_meta || {};
+    V4RANGE = null;
+    /* ISSUE-05 —— 勾选状态每次 boot 归零：Fresh Page 恒为全部未选，
+       不读 / 不写 localStorage，切换模型也不继承上一次勾选。 */
+    V4_CHK = {};
+    V4_HOVER = null;
+    V4_LG_BUILT = false;
+    window.__CMB_V4_HOVER_DATE__ = null;
+    /* ④ 的额外元数据（序列清单 / 主轴 / 各序列最早合法日 / 释义 / 阈值表） */
+    V4_SM = DATA.series_meta || [];
+    V4_AXIS = DATA.master_axis || {};
+    V4_EARLIEST = DATA.earliest_legal_date || {};
+    V4_BAND = DATA.score_band_return || {};
     /* §36 —— 展示字符串来自 Python 预计算的查找表，浏览器不自己格式化。 */
     DMAP = DATA.display_map || {};
     DMAP_PCT = DATA.display_map_pct || {};
@@ -1489,16 +3305,29 @@
     buildTree();
     cur = dates.length ? dates[dates.length-1] : null;
 
+    applyModelSections();
     bindEvents();
     /* ---- V6 初始化（全部只读渲染，不触发任何模型重算 / 外部调用） ---- */
     renderTopIdentity();
-    renderThreshold();
+    /* V4 没有阈值收益验证 / 动态阈值研究区块（section_scope 已显式说明），
+       跳过这两个 V2/V3 渲染器，避免它们去查 V4 payload 里不存在的展示键。 */
+    if(!ISV4){ renderThreshold(); renderDynamicShell(); }
     if(el('hist-start') && dates.length) el('hist-start').value = dates[0];
     if(el('hist-end') && dates.length) el('hist-end').value = dates[dates.length-1];
-    renderDynamicShell();
+    /* ④ 的单日定位 / 区间控件随模型一起重置到全轴，不继承任何上次的输入。 */
+    if(ISV4 && dates.length){
+      V4_SEL = dates[dates.length-1];
+      if(el('v4-single-date')) el('v4-single-date').value = V4_SEL;
+      if(el('v4-hist-start')) el('v4-hist-start').value = dates[0];
+      if(el('v4-hist-end')) el('v4-hist-end').value = dates[dates.length-1];
+      /* ⑦ —— 101 行 × 2 张表与模型无关地在 boot 时渲染一次。 */
+      renderV4ScoreBand();
+    }
     gotoDate(dates.length ? dates[dates.length-1] : null);
     fitSignals();
     window.__CMB_SHELL_READY__ = true;
+    /* 只读导出：供本地 / 线上门禁核对 master 交易日轴（不参与任何渲染逻辑）。 */
+    window.__CMB_SHELL_DATES__ = dates.slice();
   }
 
   /* §26 —— 懒加载的逐项明细到达后只重画当天，不重置页面状态。 */
