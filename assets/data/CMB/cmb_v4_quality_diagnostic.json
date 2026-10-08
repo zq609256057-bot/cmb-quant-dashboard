@@ -316,7 +316,7 @@
  "diagnostic_architecture": "ARCH_B_ABSOLUTE_PLUS_RELATIVE_REGIME_ATTRIBUTION_DIAGNOSTICS",
  "diagnostic_contract_id": "CMB_V4_QUALITY_DIAGNOSTIC_CONTRACT_V1",
  "diagnostic_contract_sha256": "4bc6c2176118208cb12867d70307e1c0182a088313ed81b291da93d94d373e74",
- "diagnostic_payload_sha256": "c4f9da9a44d4110f59559b7fe7040fc5d63977232f3e28fc4e65e365308c4793",
+ "diagnostic_payload_sha256": "09b283e9b373b53d7f82c5a45c440761dd9fa969110d887e2fa3d606f3b921fa",
  "display_map_diag": {
   "-0.0018842105|0": "-0",
   "-0.0018842105|2": "-0.00",
@@ -765,7 +765,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 1.23
   },
@@ -791,7 +791,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 202.87
   },
@@ -817,7 +817,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 10.72
   },
@@ -843,7 +843,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 1.54
   },
@@ -869,7 +869,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 0.58
   },
@@ -895,7 +895,7 @@
    "pit_admissible": true,
    "pit_rule": "available_from <= comparison_date",
    "publisher": "国家金融监督管理总局",
-   "retrieved_at": "2026-10-07T20:20:08.420274+08:00",
+   "retrieved_at": "2026-10-08T11:06:06.361236+08:00",
    "unit": "%",
    "value": 7.72
   }
@@ -916,14 +916,14 @@
   "model_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V4",
   "model_fingerprint": "53121253aa546693be996d9f9d8dbe93528cb036351c2770a85d36c768c50dc1",
   "model_id": "CMB_SCORE_MODEL_V4",
-  "payload_version": "RC_V12_V1",
-  "release_candidate_id": "CMB_V4_RELEASE_CANDIDATE_V12",
+  "payload_version": "RC_V13_V1",
+  "release_candidate_id": "CMB_V4_RELEASE_CANDIDATE_V13",
   "report_period": "2026-06-30",
   "schema_version": "CMB_V4_QUALITY_DIAGNOSTIC_PAYLOAD_V1",
   "staleness_rule": "PAYLOAD_IDENTITY_MISMATCH__NOT_CALENDAR_AGE",
   "staleness_rule_zh": "过期判定只比较载荷身份与当前 Release 预期身份，不按自然日年龄判定。"
  },
- "payload_version": "RC_V12_V1",
+ "payload_version": "RC_V13_V1",
  "peer_metrics": [
   {
    "available_from": "2026-08-29",
@@ -2456,7 +2456,7 @@
   "public_zh": "行业逆风与招行自身弱化共同作用",
   "value": "MIXED_WITH_MATERIAL_CMB_SPECIFIC_WEAKENING"
  },
- "rc_id": "CMB_V4_RELEASE_CANDIDATE_V12",
+ "rc_id": "CMB_V4_RELEASE_CANDIDATE_V13",
  "relative_aggregate_gate": {
   "eligible_weight_coverage_pct": 69.7368,
   "relative_quality_index": null,
