@@ -1,0 +1,345 @@
+{
+  "algorithm": "PIT_TRAILING_10Y_EXPANDING_MIN_20Q_P10_P80_LINEAR_INTERPOLATION",
+  "artifact": "CMB_THRESHOLD_EVOLUTION_V1",
+  "bank_code": "600036.SH",
+  "contract": "CMB_HISTORICAL_SCORE_AND_SHADOW_FRONTEND_CONTRACT_V1",
+  "fixed_lower": 1.85,
+  "fixed_upper": 2.6,
+  "frontend_version": "CMB_FRONTEND_V2",
+  "future_observation_used": 0,
+  "latest_dynamic_lower": 1.879,
+  "latest_dynamic_upper": 2.552,
+  "metric_id": "P01",
+  "name": "净息差 NIM",
+  "observation_basis": "SOURCE_OBSERVATION_SERIES（unique source observations）",
+  "observation_count": 85,
+  "pit_mode": "WALK_FORWARD",
+  "points": [
+    {
+      "date": "2021-03-22",
+      "dynamic_lower": 2.484,
+      "dynamic_upper": 2.94,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2020-12-31",
+      "window_start": "2011-03-31"
+    },
+    {
+      "date": "2021-04-26",
+      "dynamic_lower": 2.484,
+      "dynamic_upper": 2.906,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2021-03-31",
+      "window_start": "2011-06-30"
+    },
+    {
+      "date": "2021-08-16",
+      "dynamic_lower": 2.484,
+      "dynamic_upper": 2.892,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2021-06-30",
+      "window_start": "2011-09-30"
+    },
+    {
+      "date": "2021-10-25",
+      "dynamic_lower": 2.475,
+      "dynamic_upper": 2.882,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2021-09-30",
+      "window_start": "2011-12-31"
+    },
+    {
+      "date": "2022-03-21",
+      "dynamic_lower": 2.475,
+      "dynamic_upper": 2.84,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2021-12-31",
+      "window_start": "2012-03-31"
+    },
+    {
+      "date": "2022-04-25",
+      "dynamic_lower": 2.475,
+      "dynamic_upper": 2.822,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2022-03-31",
+      "window_start": "2012-06-30"
+    },
+    {
+      "date": "2022-08-22",
+      "dynamic_lower": 2.439,
+      "dynamic_upper": 2.78,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2022-06-30",
+      "window_start": "2012-09-30"
+    },
+    {
+      "date": "2022-10-31",
+      "dynamic_lower": 2.43,
+      "dynamic_upper": 2.754,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2022-09-30",
+      "window_start": "2012-12-31"
+    },
+    {
+      "date": "2023-03-27",
+      "dynamic_lower": 2.43,
+      "dynamic_upper": 2.75,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2022-12-31",
+      "window_start": "2013-03-31"
+    },
+    {
+      "date": "2023-04-27",
+      "dynamic_lower": 2.43,
+      "dynamic_upper": 2.75,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2022-12-31",
+      "window_start": "2013-03-31"
+    },
+    {
+      "date": "2023-04-28",
+      "dynamic_lower": 2.429,
+      "dynamic_upper": 2.726,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-03-31",
+      "window_start": "2013-06-30"
+    },
+    {
+      "date": "2023-08-28",
+      "dynamic_lower": 2.419,
+      "dynamic_upper": 2.704,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-06-30",
+      "window_start": "2013-09-30"
+    },
+    {
+      "date": "2023-10-30",
+      "dynamic_lower": 2.409,
+      "dynamic_upper": 2.66,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-09-30",
+      "window_start": "2013-12-31"
+    },
+    {
+      "date": "2024-03-26",
+      "dynamic_lower": 2.409,
+      "dynamic_upper": 2.66,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-09-30",
+      "window_start": "2013-12-31"
+    },
+    {
+      "date": "2024-03-27",
+      "dynamic_lower": 2.389,
+      "dynamic_upper": 2.65,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-12-31",
+      "window_start": "2014-03-31"
+    },
+    {
+      "date": "2024-04-30",
+      "dynamic_lower": 2.389,
+      "dynamic_upper": 2.65,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2023-12-31",
+      "window_start": "2014-03-31"
+    },
+    {
+      "date": "2024-05-06",
+      "dynamic_lower": 2.284,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-03-31",
+      "window_start": "2014-06-30"
+    },
+    {
+      "date": "2024-08-30",
+      "dynamic_lower": 2.284,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-03-31",
+      "window_start": "2014-06-30"
+    },
+    {
+      "date": "2024-09-02",
+      "dynamic_lower": 2.226,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-06-30",
+      "window_start": "2014-09-30"
+    },
+    {
+      "date": "2024-10-30",
+      "dynamic_lower": 2.226,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-06-30",
+      "window_start": "2014-09-30"
+    },
+    {
+      "date": "2024-10-31",
+      "dynamic_lower": 2.186,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-09-30",
+      "window_start": "2014-12-31"
+    },
+    {
+      "date": "2025-03-26",
+      "dynamic_lower": 2.186,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-09-30",
+      "window_start": "2014-12-31"
+    },
+    {
+      "date": "2025-03-27",
+      "dynamic_lower": 2.137,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-12-31",
+      "window_start": "2015-03-31"
+    },
+    {
+      "date": "2025-04-30",
+      "dynamic_lower": 2.137,
+      "dynamic_upper": 2.626,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2024-12-31",
+      "window_start": "2015-03-31"
+    },
+    {
+      "date": "2025-05-06",
+      "dynamic_lower": 2.018,
+      "dynamic_upper": 2.596,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-03-31",
+      "window_start": "2015-06-30"
+    },
+    {
+      "date": "2025-09-01",
+      "dynamic_lower": 1.999,
+      "dynamic_upper": 2.582,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-06-30",
+      "window_start": "2015-09-30"
+    },
+    {
+      "date": "2025-10-30",
+      "dynamic_lower": 1.999,
+      "dynamic_upper": 2.582,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-06-30",
+      "window_start": "2015-09-30"
+    },
+    {
+      "date": "2025-10-31",
+      "dynamic_lower": 1.989,
+      "dynamic_upper": 2.58,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-09-30",
+      "window_start": "2015-12-31"
+    },
+    {
+      "date": "2026-03-30",
+      "dynamic_lower": 1.973,
+      "dynamic_upper": 2.572,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-12-31",
+      "window_start": "2016-03-31"
+    },
+    {
+      "date": "2026-04-29",
+      "dynamic_lower": 1.973,
+      "dynamic_upper": 2.572,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2025-12-31",
+      "window_start": "2016-03-31"
+    },
+    {
+      "date": "2026-04-30",
+      "dynamic_lower": 1.907,
+      "dynamic_upper": 2.562,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2026-03-31",
+      "window_start": "2016-06-30"
+    },
+    {
+      "date": "2026-08-31",
+      "dynamic_lower": 1.879,
+      "dynamic_upper": 2.552,
+      "fixed_lower": 1.85,
+      "fixed_upper": 2.6,
+      "observation_count": 40,
+      "window_end": "2026-06-30",
+      "window_start": "2016-09-30"
+    }
+  ],
+  "public_series_note": "公开产物只发布 Fixed 锚与 Shadow 动态阈值带的演化，不发布指标原始值（沿用 V1 脱敏纪律）。",
+  "research_only": true,
+  "self_inclusion": 0,
+  "status": "ALGORITHM_FROZEN_IN_PHASE1",
+  "window_end": "2026-06-30",
+  "window_start": "2011-03-31"
+}

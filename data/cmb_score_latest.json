@@ -1,0 +1,189 @@
+{
+  "artifact_hash": "329261bd05262b2754a41c1492809a6de2da2c2c93cf76f20d39dd854e877e82",
+  "available_weight": 100.0,
+  "base_score": 68.392369,
+  "base_score_status": "FULLY_AVAILABLE",
+  "data_asof": "2026-10-08",
+  "dimension_scores": {
+    "DIMENSION_01": 11.132006,
+    "DIMENSION_02": 21.404077,
+    "DIMENSION_03": 14.12,
+    "DIMENSION_04": 18.274647,
+    "DIMENSION_05": 3.461639
+  },
+  "final_score": null,
+  "final_score_status": "NOT_FULLY_AVAILABLE",
+  "generated_at": "2026-10-08T08:24:57.178585+00:00",
+  "metric_display_values": {
+    "A01": 0.94,
+    "A02": 385.1,
+    "A03": 1.53084,
+    "A04": 0.6,
+    "A05": 1.06,
+    "A06": 0.77,
+    "D01": 72.06,
+    "D02": 3.998568,
+    "F01": 14.07,
+    "F02": 49.4,
+    "F03": 1.17,
+    "F04": 200.03,
+    "M01": 0.4411,
+    "P01": 1.83,
+    "P02": 1.14,
+    "P03": 13.42,
+    "P04": 2.85673,
+    "P05": 5.99,
+    "P06": 29.695647,
+    "T01": 0.079439,
+    "T02": 18.63331,
+    "V01": 13.6,
+    "V02": 3.2162,
+    "V03": 30.08
+  },
+  "metric_scores": {
+    "A01": 6.688889,
+    "A02": 4.272917,
+    "A03": 3.345801,
+    "A04": 3.0,
+    "A05": 1.52,
+    "A06": 2.576471,
+    "D01": 3.422545,
+    "D02": 3.998568,
+    "F01": 7.0,
+    "F02": 0.8,
+    "F03": 3.32,
+    "F04": 3.0,
+    "M01": 1.3822,
+    "P01": 0.0,
+    "P02": 3.090909,
+    "P03": 1.954286,
+    "P04": 1.848642,
+    "P05": 2.5188,
+    "P06": 1.719369,
+    "T01": 0.079439,
+    "T02": 2.0,
+    "V01": 6.64,
+    "V02": 2.7162,
+    "V03": 1.497333
+  },
+  "missing_metric_ids": [],
+  "model_id": "CMB_SCORE_MODEL_V1_1",
+  "model_version": "V1_1",
+  "overlay_missing_fields": [
+    "credit_card_npl_ratio",
+    "npl_formation_rate"
+  ],
+  "overlay_score": null,
+  "overlay_status": "NOT_FULLY_AVAILABLE",
+  "overlay_trigger_states": [
+    {
+      "depends_on": [
+        "A01"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CREDIT-01",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "A03"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CREDIT-02",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "A05"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CREDIT-03",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "credit_card_npl_ratio"
+      ],
+      "evaluable": false,
+      "inputs_available": false,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CREDIT-04",
+      "state": "INPUTS_NOT_AVAILABLE"
+    },
+    {
+      "depends_on": [
+        "npl_formation_rate"
+      ],
+      "evaluable": false,
+      "inputs_available": false,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CREDIT-05",
+      "state": "INPUTS_NOT_AVAILABLE"
+    },
+    {
+      "depends_on": [
+        "P01"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "PROFIT-01",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "P04"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "PROFIT-02",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "F01"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CAPITAL-01",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    },
+    {
+      "depends_on": [
+        "F04"
+      ],
+      "evaluable": false,
+      "inputs_available": true,
+      "note": "Trigger 状态可独立展示；是否计入处罚由正式 Overlay 规则决定。",
+      "rule_id": "CAPITAL-02",
+      "state": "INPUTS_AVAILABLE_NOT_EVALUATED"
+    }
+  ],
+  "provider_status_summary": {
+    "api_calls_this_run": 4,
+    "mode": "INCREMENTAL",
+    "providers": [
+      "LIXINGER",
+      "CMB_OFFICIAL"
+    ]
+  },
+  "publish_version": "V1",
+  "runtime_status_summary": {
+    "local_compute": "SUCCESS",
+    "local_snapshot": "SUCCESS",
+    "pipeline_version": "CMB_DAILY_PIPELINE_V1",
+    "run_id": null
+  },
+  "schema": "CMB_PUBLIC_FRONTEND_ARTIFACT_V1",
+  "score_date": "2026-10-08",
+  "snapshot_hash": "4b3fb5fd9986cc8cd1137be74918fd71e5aceb5e339b356efda4b77fb77fc046",
+  "source_metric_date_count": 24
+}
