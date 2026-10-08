@@ -108813,6 +108813,66 @@
     "quality_score": 66.06887299408814,
     "valuation_score": 86.44186492709133
    }
+  },
+  "2026-10-08": {
+   "contract_version": null,
+   "forward_state": null,
+   "missing_pillars": [
+    "QUALITY",
+    "VALUATION",
+    "PRICE_LOCATION",
+    "MARKET_CONFIRMATION",
+    "MACRO"
+   ],
+   "model_fingerprint": null,
+   "model_id": null,
+   "model_status": "NOT_FULLY_AVAILABLE",
+   "pillars": {
+    "MACRO_VALUATION_ENV": {
+     "members": [],
+     "pillar": "MACRO_VALUATION_ENV",
+     "score": null,
+     "score_display": null,
+     "status": "NOT_FULLY_AVAILABLE"
+    },
+    "MARKET_CONFIRMATION": {
+     "members": [],
+     "pillar": "MARKET_CONFIRMATION",
+     "score": null,
+     "score_display": null,
+     "status": "NOT_FULLY_AVAILABLE"
+    },
+    "PRICE_LOCATION": {
+     "members": [],
+     "pillar": "PRICE_LOCATION",
+     "score": null,
+     "score_display": null,
+     "status": "NOT_FULLY_AVAILABLE"
+    },
+    "QUALITY": {
+     "members": [],
+     "pillar": "QUALITY",
+     "score": null,
+     "score_display": null,
+     "status": "NOT_FULLY_AVAILABLE"
+    },
+    "VALUATION": {
+     "members": [],
+     "pillar": "VALUATION",
+     "score": null,
+     "score_display": null,
+     "status": "NOT_FULLY_AVAILABLE"
+    }
+   },
+   "risk_overlay": null,
+   "score_date": "2026-10-08",
+   "scores": {
+    "macro_valuation_env_score": null,
+    "market_confirmation_score": null,
+    "price_location_score": null,
+    "quality_score": null,
+    "valuation_score": null
+   }
   }
  },
  "display_map": {
