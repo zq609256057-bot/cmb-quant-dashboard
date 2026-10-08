@@ -1,1 +1,216 @@
-{"schema":"CMB_BANK_FRONTEND_REGISTRY_CONTRACT_V1","contract":"CMB_MULTI_BANK_MULTI_MODEL_FRONTEND_CONTRACT_V1","default_institution_id":"CMB","default_model_id":"CMB_SCORE_MODEL_V3","bank_selector_policy":"ALWAYS_VISIBLE__SINGLE_OPTION_NOT_HIDDEN","future_bank_extension":{"supported_without_refactor":["BOC","ABC","ICBC","CCB","BOCOM","OTHER"],"required_additions":["BANK_REGISTRY_ENTRY","BANK_DATA_ARTIFACT","BANK_MODEL_REGISTRY"],"forbidden":["FAKE_SCORE","FAKE_MODEL","EMPTY_CLICKABLE_PAGE","HTML_REWRITE"]},"banks":[{"institution_id":"CMB","institution_name_zh":"招商银行","instrument_id":"600036.SH","instrument_name_zh":"招商银行","market":"A_SHARE","status":"CONNECTED","data_available":true,"models":[{"model_id":"CMB_SCORE_MODEL_V3","model_name_zh":"招商银行量化评分模型 V3","selection_role":"DEFAULT","operational_status":"RELEASE_CANDIDATE","production_authority":false,"contract_version":"CMB_SCORE_MODEL_V3_CONTRACT_V1","runtime_version":"CMB_V3_RUNTIME_V1","model_fingerprint":"c1ec688fcb535faf9d2931938a5b98ee866a91d4ef3e93d612829dfd3e206ca1","public_visible":true,"status_badge_zh":"Release Candidate","selection_label_zh":"默认模型","data_dir":"CMB_SCORE_MODEL_V3","available_sections":["core","investment","forward","risk_overlay","v04","rs60","history"]},{"model_id":"CMB_SCORE_MODEL_V2","model_name_zh":"招商银行量化评分模型 V2","selection_role":"ALTERNATE_CANDIDATE","operational_status":"ACTIVE_PRODUCTION","production_authority":true,"contract_version":"CMB_SCORE_CONTRACT_V1_1","runtime_version":"CMB_V2_RUNTIME_V1","model_fingerprint":null,"public_visible":true,"status_badge_zh":"Active Production","selection_label_zh":"候选模型","data_dir":"CMB_SCORE_MODEL_V2","available_sections":["core","investment","forward","risk_overlay","history"]}],"default_model_id":"CMB_SCORE_MODEL_V3"}],"generated_at":"2026-10-08T17:23:08+0800","frontend_version":"CMB_MULTI_BANK_MULTI_MODEL_FRONTEND_V2","shell_version":"MODEL_V2_FRONTEND_V6"}
+{
+ "bank_selector_policy": "ALWAYS_VISIBLE__SINGLE_OPTION_NOT_HIDDEN",
+ "banks": [
+  {
+   "data_available": true,
+   "default_model_id": "CMB_SCORE_MODEL_V4",
+   "institution_id": "CMB",
+   "institution_name_zh": "招商银行",
+   "instrument_id": "600036.SH",
+   "instrument_name_zh": "招商银行",
+   "market": "A_SHARE",
+   "models": [
+    {
+     "available_sections": [
+      "five_pillars",
+      "forward",
+      "risk_overlay",
+      "history",
+      "judgment",
+      "score_band_return",
+      "quality_diagnostic"
+     ],
+     "codex_rc10_first_failed_gate": "G050",
+     "codex_rc10_gates": "169 PASS / 30 FAIL / 0 PENDING / 1 UNKNOWN",
+     "codex_rc10_result": "FAIL",
+     "codex_rc11_first_failed_gate": "G124",
+     "codex_rc11_full_regression": "FAIL",
+     "codex_rc11_gates": "190 PASS / 30 FAIL / 0 UNKNOWN / 0 PENDING (220 gates)",
+     "codex_rc11_result": "FAIL",
+     "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V4",
+     "data_dir": "CMB_SCORE_MODEL_V4",
+     "diagnostic_contract_id": "CMB_V4_QUALITY_DIAGNOSTIC_CONTRACT_V1",
+     "diagnostic_payload_file": "assets/data/CMB/cmb_v4_quality_diagnostic.json",
+     "model_fingerprint": "53121253aa546693be996d9f9d8dbe93528cb036351c2770a85d36c768c50dc1",
+     "model_fingerprint_natural_ledger_reset": false,
+     "model_fingerprint_natural_validation": "0 / 3",
+     "model_id": "CMB_SCORE_MODEL_V4",
+     "model_name_zh": "招商银行量化评分模型 V4",
+     "old_rc_v10_payload_version": "RC_V10_V1",
+     "old_rc_v10_rc_id": "CMB_V4_RELEASE_CANDIDATE_V10",
+     "old_rc_v10_status": "HISTORICAL_AUDITED_FAIL",
+     "old_rc_v11_payload_version": "RC_V11_V1",
+     "old_rc_v11_rc_id": "CMB_V4_RELEASE_CANDIDATE_V11",
+     "old_rc_v11_status": "HISTORICAL_AUDITED_FAIL",
+     "old_rc_v4_contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V2",
+     "old_rc_v4_fingerprint": "7f1101ac3fb280946b9f4ef7022ff78c1716f5eea79cda5d8b5bb0d4e7cf6087",
+     "old_rc_v5_payload_version": "RC_V5_V1",
+     "old_rc_v5_rc_id": "CMB_V4_RELEASE_CANDIDATE_V5",
+     "old_rc_v6_payload_version": "RC_V6_V1",
+     "old_rc_v6_rc_id": "CMB_V4_RELEASE_CANDIDATE_V6",
+     "old_rc_v7_rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
+     "old_rc_v8_payload_version": "RC_V8_V1",
+     "old_rc_v8_rc_id": "CMB_V4_RELEASE_CANDIDATE_V8",
+     "old_rc_v8_status": "HISTORICAL_SUPERSEDED_BY_ARCH_B_DIAGNOSTIC_LAYER",
+     "old_rc_v9_payload_version": "RC_V9_V1",
+     "old_rc_v9_rc_id": "CMB_V4_RELEASE_CANDIDATE_V9",
+     "old_rc_v9_status": "HISTORICAL_AUDITED_FAIL",
+     "operational_status": "RELEASE_CANDIDATE",
+     "overall_score": "FORBIDDEN",
+     "payload_version": "RC_V13_V1",
+     "presentation_truth": {
+      "browser_business_recalc_count": 0,
+      "forbidden_public_copy_match_count": 0,
+      "legacy_user_visible_duplicate_count": 0,
+      "market_confirmation_visible_component_rows": 2,
+      "price_location_visible_component_rows": 3,
+      "public_long_engineering_copy": "REMOVED",
+      "valuation_visible_component_rows": 3
+     },
+     "production_authority": false,
+     "public_visible": true,
+     "rc10_diagnostic_presentation_validation": "0 / 3",
+     "rc10_pre_audit_self_claim": "HISTORICAL_PRE_AUDIT_INPUT",
+     "rc10_pre_audit_self_claim_gates": "100 / 100 PASS",
+     "rc11_diagnostic_presentation_validation": "0 / 3",
+     "rc11_pre_audit_self_claim": "HISTORICAL_PRE_AUDIT_INPUT",
+     "rc11_pre_audit_self_claim_gates": "170 / 170 PASS",
+     "rc12_diagnostic_presentation_validation": "0 / 3",
+     "rc_id": "CMB_V4_RELEASE_CANDIDATE_V13",
+     "rc_status": "FROZEN__READY_FOR_CODEX_VERSIONED_FINAL_REAUDIT",
+     "rc_v3_status": "SUPERSEDED_BY_CODEX_FINAL_AUDIT_FAILURE",
+     "rc_v6_scope": {
+      "CONTRACT_CHANGED": false,
+      "FINGERPRINT_CHANGED": false,
+      "MODEL_VERSION_SEMANTICS_CHANGED": false,
+      "RC_VERSION_CHANGED": true,
+      "scope_zh": "仅前端展示真相 / 证据真相 / 回滚完整性 / 当前权威收口；未改任何模型语义、权重、公式、阈值、锚点、PIT 规则或业务评分结果。"
+     },
+     "rc_v7_scope": {
+      "CONTRACT_CHANGED": false,
+      "CORE_MODEL_SEMANTIC_CHANGE": false,
+      "FINGERPRINT_CHANGED": false,
+      "MODEL_VERSION_SEMANTICS_CHANGED": false,
+      "RC_VERSION_CHANGED": true,
+      "RESEARCH_RETURN_VALIDATION_SEMANTIC_CHANGE": true,
+      "scope_zh": "仅⑦评分区间收益验证口径 + Public Frontend 说明文字清理 + 回滚治理 / 当前权威收口；未改任何模型语义、权重、公式、阈值、锚点、PIT 规则或业务评分结果。"
+     },
+     "runtime_version": "V4_RUNTIME_V1",
+     "score_band_return": {
+      "band_labels": [
+       "0-10",
+       "11-20",
+       "21-30",
+       "31-40",
+       "41-50",
+       "51-60",
+       "61-70",
+       "71-80",
+       "81-90",
+       "91-100"
+      ],
+      "confirmation_band_rows": 10,
+      "contract": "CMB_V4_SCORE_BAND_RETURN_VALIDATION_CONTRACT_V1",
+      "method": "MUTUALLY_EXCLUSIVE_SCORE_BAND",
+      "old_cumulative_threshold_mode": "SUPERSEDED",
+      "old_threshold_status": "HISTORICAL_SUPERSEDED_BY_SCORE_BAND_RETURN_VALIDATION",
+      "price_band_rows": 10,
+      "rounding_applied": false,
+      "score_precision": "FULL_PRECISION_CANONICAL_SCORE"
+     },
+     "selection_label_zh": "默认模型",
+     "selection_role": "DEFAULT",
+     "status_badge_zh": "Release Candidate",
+     "superseded_rc": [
+      "CMB_V4_RELEASE_CANDIDATE_V3",
+      "CMB_V4_RELEASE_CANDIDATE_V4",
+      "CMB_V4_RELEASE_CANDIDATE_V5",
+      "CMB_V4_RELEASE_CANDIDATE_V6"
+     ],
+     "superseded_rc_id": "CMB_V4_RELEASE_CANDIDATE_V12",
+     "superseded_rc_status": "HISTORICAL_AUDITED_FAIL",
+     "v4_production_authority": false,
+     "v4_production_scheduler": "NOT_LOADED",
+     "weight_amendment": {
+      "MARKET_CONFIRMATION": "Absolute Trend 60% / RS60 40%",
+      "PRICE_LOCATION": "1Y 25% / 3Y 35% / 5Y 40%",
+      "VALUATION": "DY 30% / PB 55% / PE 15%"
+     }
+    },
+    {
+     "available_sections": [
+      "core",
+      "investment",
+      "forward",
+      "risk_overlay",
+      "v04",
+      "rs60",
+      "history"
+     ],
+     "contract_version": "CMB_SCORE_MODEL_V3_CONTRACT_V1",
+     "data_dir": "CMB_SCORE_MODEL_V3",
+     "model_fingerprint": "c1ec688fcb535faf9d2931938a5b98ee866a91d4ef3e93d612829dfd3e206ca1",
+     "model_id": "CMB_SCORE_MODEL_V3",
+     "model_name_zh": "招商银行量化评分模型 V3",
+     "operational_status": "RELEASE_CANDIDATE",
+     "production_authority": false,
+     "public_visible": true,
+     "runtime_version": "CMB_V3_RUNTIME_V1",
+     "selection_label_zh": "候选模型",
+     "selection_role": "ALTERNATE_CANDIDATE",
+     "status_badge_zh": "Release Candidate"
+    },
+    {
+     "available_sections": [
+      "core",
+      "investment",
+      "forward",
+      "risk_overlay",
+      "history"
+     ],
+     "contract_version": "CMB_SCORE_CONTRACT_V1_1",
+     "data_dir": "CMB_SCORE_MODEL_V2",
+     "model_fingerprint": null,
+     "model_id": "CMB_SCORE_MODEL_V2",
+     "model_name_zh": "招商银行量化评分模型 V2",
+     "operational_status": "ACTIVE_PRODUCTION",
+     "production_authority": true,
+     "public_visible": true,
+     "runtime_version": "CMB_V2_RUNTIME_V1",
+     "selection_label_zh": "候选模型",
+     "selection_role": "ALTERNATE_CANDIDATE",
+     "status_badge_zh": "Active Production"
+    }
+   ],
+   "status": "CONNECTED"
+  }
+ ],
+ "contract": "CMB_MULTI_BANK_MULTI_MODEL_FRONTEND_CONTRACT_V1",
+ "default_institution_id": "CMB",
+ "default_model_id": "CMB_SCORE_MODEL_V4",
+ "frontend_version": "CMB_MULTI_BANK_MULTI_MODEL_FRONTEND_V2",
+ "future_bank_extension": {
+  "forbidden": [
+   "FAKE_SCORE",
+   "FAKE_MODEL",
+   "EMPTY_CLICKABLE_PAGE",
+   "HTML_REWRITE"
+  ],
+  "required_additions": [
+   "BANK_REGISTRY_ENTRY",
+   "BANK_DATA_ARTIFACT",
+   "BANK_MODEL_REGISTRY"
+  ],
+  "supported_without_refactor": [
+   "BOC",
+   "ABC",
+   "ICBC",
+   "CCB",
+   "BOCOM",
+   "OTHER"
+  ]
+ },
+ "generated_at": "2026-10-08T19:13:30+0800",
+ "schema": "CMB_BANK_FRONTEND_REGISTRY_CONTRACT_V1",
+ "shell_version": "MODEL_V2_FRONTEND_V6"
+}

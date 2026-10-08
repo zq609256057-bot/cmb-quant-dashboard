@@ -1,7 +1,7 @@
 {
   "artifact": "CMB_V4_PUBLIC_PUBLISH_MANIFEST_V1",
   "authority_id": "CMB_V4_FRONTEND_PUBLISH_AUTHORITY_V1",
-  "file_count": 47,
+  "file_count": 48,
   "files": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "README.md": "a83484ce3ff5363f66ebc3e8134e8839285268242bb05fdef1673fe10f2f1cf4",
@@ -48,9 +48,10 @@
     "assets/data/CMB/CMB_SCORE_MODEL_V4/view.json": "e8829eb285caf1ddc07c2ee2b346f4361579ce0a77241450c6b51aaec1aeb836",
     "assets/data/CMB/cmb_v4_quality_diagnostic.json": "f565513be5653c342e4c861565b7f0bbe6afaa36261e0751dc967e2d924dcad0",
     "assets/data/CMB/models.json": "dd0d789ce2e6914a2e43594084273565efcfbca3af27abfef53667679f033732",
+    "assets/data/banks.json": "2b9ac551277351eac645d3d19d20dc72da96f9a19d20f6a56fc15d9a08756b44",
     "assets/shell.js": "bb9527e6c460c81cf0907524eefb926653ce7a7eebd4cececf431f991b4ed286",
     "index.html": "e4cfb83bda75a4fd94a5f924c886cd884fca817bee5a0f997cf73259c2348c7b"
   },
-  "generated_at": "2026-10-08T10:44:31.847860+00:00",
+  "generated_at": "2026-10-08T11:14:56.908248+00:00",
   "owner": "CMB_SCORE_MODEL_V4"
 }
