@@ -9,9 +9,6 @@
      单页 shell + 数据驱动换模型：不存在 index_v2.html / index_v3.html 分叉。
      浏览器只做 fetch / select / format / render / chart，绝不重算任何评分。 -->
 <link rel="stylesheet" href="assets/app.css">
-<!-- 站点没有 favicon 文件，显式声明空图标：浏览器不再自动请求 /favicon.ico，
-     那会在控制台留下一条与本页业务无关的 404。 -->
-<link rel="icon" href="data:,">
 </head>
 <body>
 <!-- §23 —— 视觉外壳直接挂在 <body> 下，与黄金页的 body 子节点结构完全一致
@@ -76,115 +73,6 @@
     <div class="ti-left" id="ti-left">—</div>
     <div class="ti-right" id="ti-right">—</div>
   </div>
-
-  <!-- =========================================================================
-       CMB_SCORE_MODEL_V4 ONLY —— 五柱独立评分（V2 / V3 渲染路径完全不变）
-       视觉语言沿用同一套 MODEL_V2_FRONTEND_V6 外壳与 CSS；这组 section 只在
-       model_id = CMB_SCORE_MODEL_V4 时显示，其余模型下 hidden。
-       浏览器依旧只 fetch / select / 查表 / render / chart，绝不重算任何评分。 -->
-  <section class="card" id="v4-overview" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">①</span>五维独立评分 · 五柱各自 0~100</div>
-    <div class="card-subtitle">五柱互不加权、互不折抵、不合成总分。</div>
-    <div class="kpi-grid kpi-grid-5" id="v4-pillar-grid"></div>
-    <div class="selector-status" id="v4-day-status">—</div>
-  </section>
-
-  <!-- RC V9 / ARCH B —— 只读质量诊断层。
-       放在五柱总览之后、前瞻状态之前：贴近「基本面质量」主卡，但不改变五柱
-       布局 / 大小 / 顺序，也不产生第二个质量总分。 -->
-  <section class="card" id="v4-quality-diagnostic" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">②</span>质量诊断 · 只读参考</div>
-    <div class="card-subtitle">以下三项为解释性参考，不参与「基本面质量」评分计算。</div>
-    <div class="kpi-grid kpi-grid-3" id="v4-diag-chips"></div>
-    <div id="v4-diag-detail"></div>
-  </section>
-
-  <section class="card" id="v4-second" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">③</span>前瞻状态 · Risk Overlay（独立）</div>
-    <div class="card-subtitle">第二主视觉只映射「前瞻 + 风险」，不产生任何综合分。</div>
-    <div class="kpi-grid kpi-grid-2">
-      <div class="kpi-card" id="v4-fwd-card">
-        <div class="kpi-label">前瞻状态（NO_SCORE）</div>
-        <div id="v4-fwd-state"></div>
-        <div id="v4-fwd-meta"></div>
-      </div>
-      <div class="kpi-card kpi-overlay" id="v4-ro-card">
-        <div class="kpi-label">Risk Overlay（独立 · 0 ~ -20）</div>
-        <span class="kpi-value" id="v4-ro-score">—</span>
-        <div id="v4-ro-meta"></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="card" id="v4-details" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">④</span>五柱明细 · 逐项可解释</div>
-    <div id="v4-pillar-blocks"></div>
-  </section>
-
-  <section class="card" id="v4-history-card" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">⑤</span>五柱历史 · 价格走独立右轴</div>
-    <div class="card-subtitle">五柱共享同一条 0~100 左轴；招商银行前复权收盘价走独立右轴（RMB），
-      绝不归一化到 0~100 与评分共轴。缺失日显式断开，绝不前向填充。</div>
-    <!-- ISSUE-06 —— 单日定位：输入任意日期，回退到不晚于该日的最近交易日并显式提示。
-         ISSUE-05 —— 方形复选图例：Fresh Page 全部默认未选，刷新后不记忆勾选。 -->
-    <div class="range-toolbar">
-      <div class="range-field"><label for="v4-single-date">单日定位</label>
-        <input type="date" id="v4-single-date" aria-label="单日定位"></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-single-apply">定位</button></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-1y">1Y</button></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-3y">3Y</button></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-all">ALL</button></div>
-    </div>
-    <div class="range-toolbar">
-      <div class="range-field"><label for="v4-hist-start">区间开始</label>
-        <input type="date" id="v4-hist-start" aria-label="历史区间开始日期"></div>
-      <div class="range-field"><label for="v4-hist-end">区间结束</label>
-        <input type="date" id="v4-hist-end" aria-label="历史区间结束日期"></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-apply">应用区间</button></div>
-      <div class="range-field"><button type="button" class="btn-mini" id="v4-hist-reset">重置区间</button></div>
-    </div>
-    <div class="status-note" id="v4-range-note" hidden></div>
-    <div class="selector-status" id="v4-range-status">—</div>
-    <div class="chart-legend v4-legend" id="v4-chart-legend"></div>
-    <div class="chart-scroll"><div class="chart-shell" id="chartV4">
-      <canvas class="score-canvas"></canvas><canvas class="chart-crosshair"></canvas>
-      <div class="chart-tooltip"></div>
-    </div></div>
-    <!-- ISSUE-07 —— 十字线 / Tooltip / 图例 / 曲线统一使用同一个 selectedTradingDate -->
-    <div class="selector-status" id="v4-hover-status">—</div>
-  </section>
-
-  <!-- ISSUE-09 —— ⑥ 综合研判：本地 Python 确定性生成（0 次大模型调用），
-       沿用 V2 的 Positive / Negative / Conclusion 工程框架但不复制 V2 业务逻辑；
-       不产生第六个分数，不含买卖建议。 -->
-  <section class="card" id="v4-judgment" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">⑥</span>综合研判</div>
-    <div class="card-subtitle">把五个独立维度放在一起读；不合成总分，不给出买卖建议。</div>
-    <div class="assess-grid">
-      <div class="assess-card pos">
-        <h4>Positive · 利多因素</h4><ul id="v4-j-pos"></ul>
-      </div>
-      <div class="assess-card neg">
-        <h4>Negative · 利空因素</h4><ul id="v4-j-neg"></ul>
-      </div>
-      <div class="assess-card concl">
-        <h4>Conclusion · 综合研判</h4><p id="v4-j-concl">—</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- PART A / PART J —— ⑦ 评分区间收益验证（MUTUALLY_EXCLUSIVE_SCORE_BAND）。
-       旧「累计 Threshold（价格位置 Score >= / 市场确认 Score <=，11 档）」口径已废止。
-       ⑦ 极简：只有标题 + 价格位置表 + 市场确认表，每张表固定 10 行；
-       公式 / 信号方向 / Contract ID / Provider / Entry-Exit / MDD 工程说明
-       一律不下发到 Public Frontend，只保留在内部 Contract 与 Evidence。 -->
-  <section class="card" id="v4-threshold" data-v4="1" hidden>
-    <div class="card-title"><span class="ord">⑦</span>评分区间收益验证（0~100 · 10 分区间）</div>
-    <div class="section-label">价格位置</div>
-    <div class="table-scroll"><div id="v4-band-pl"></div></div>
-    <div class="section-label">市场确认</div>
-    <div class="table-scroll"><div id="v4-band-mc"></div></div>
-  </section>
 
   <!-- §13 / §14 / §15 —— Hero：展示标题改为「值博率」，且不参与一级编号。
        底层仍分别绑定 CORE_FUNDAMENTAL_SCORE / INVESTMENT_ATTRACTION_SCORE。 -->
