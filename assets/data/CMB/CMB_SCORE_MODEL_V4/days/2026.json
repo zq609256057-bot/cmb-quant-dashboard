@@ -125749,6 +125749,732 @@
     "quality_score": 66.06887299408814,
     "valuation_score": 84.56093361392769
    }
+  },
+  "2026-10-29": {
+   "contract_version": "CMB_SCORE_MODEL_V4_CONTRACT_V4",
+   "forward": {
+    "NO_SCORE": true,
+    "confidence": null,
+    "confidence_display": "—",
+    "contract_id": "CMB_FORWARD_FUNDAMENTAL_PRODUCTION_CONTRACT_V1",
+    "data_quality_state": {
+     "conflict_count": 0,
+     "needs_review_count": 0,
+     "source_checks": {},
+     "stale_count": 0,
+     "state": "INSUFFICIENT_EVIDENCE"
+    },
+    "reason": null,
+    "score": null,
+    "source": "COMMON_FORWARD_SERVICE",
+    "state": "INSUFFICIENT_EVIDENCE",
+    "status": "FULLY_AVAILABLE"
+   },
+   "forward_state": {
+    "NO_SCORE": true,
+    "confidence": null,
+    "confidence_display": "—",
+    "contract_id": "CMB_FORWARD_FUNDAMENTAL_PRODUCTION_CONTRACT_V1",
+    "data_quality_state": {
+     "conflict_count": 0,
+     "needs_review_count": 0,
+     "source_checks": {},
+     "stale_count": 0,
+     "state": "INSUFFICIENT_EVIDENCE"
+    },
+    "reason": null,
+    "score": null,
+    "source": "COMMON_FORWARD_SERVICE",
+    "state": "INSUFFICIENT_EVIDENCE",
+    "status": "FULLY_AVAILABLE"
+   },
+   "judgment": {
+    "advice_affirmative_count": 0,
+    "advice_affirmative_detected": false,
+    "advice_guard_note": "第四代：极性合成 + 作用域饱和。否定算子只支配紧随其后的成分——「没有任何风险 BUY now」里「没有」的宾语是「风险」，后面的 BUY 独立判为肯定建议；「不建议买入」「不宜卖出」「切勿据此买入」这类道义否定正确计为否定风险提示；双重否定（不得不 / 不能不）与否定形容词（not unsafe）按奇偶归位。不确定时保守判为肯定建议。",
+    "advice_guard_version": "ADVICE_GUARD_V4_POLARITY_SCOPE_RC12",
+    "advice_metadata_consistent": true,
+    "advice_negated_count": 0,
+    "advice_negated_hits": [],
+    "advice_raw_substring_hits": [],
+    "advice_wording_clean": true,
+    "advice_wording_hits": [],
+    "band_thresholds": {
+     "HIGH": 70.0,
+     "LOW": 40.0
+    },
+    "bands": {
+     "MACRO": "HIGH",
+     "MARKET_CONFIRMATION": "HIGH",
+     "PRICE_LOCATION": "LOW",
+     "QUALITY": "MID",
+     "VALUATION": "HIGH"
+    },
+    "composite_score_emitted": false,
+    "conclusion": "五柱彼此独立，不存在综合分；以下只是把五个维度的当前状态放在一起读。价格位置偏低而市场确认较高：趋势确认较强，但价格位置已偏高。风险叠加层当日不可用（NOT_FULLY_AVAILABLE），按缺失披露处理。本页面不产生买卖建议，也不产生第六个分数。",
+    "contract_id": "CMB_V4_COMPREHENSIVE_JUDGMENT_CONTRACT_V1",
+    "generation": "LOCAL_PYTHON_DETERMINISTIC_RULES",
+    "llm_runtime_calls": 0,
+    "negative": [
+     "净息差 1.83% 位于其自身近十年分布的中下区间，对质量分形成拖累。",
+     "价格位置 6.88：当前价格处在 1 年 / 3 年 / 5 年区间的相对高位，位置优势不足（1Y 99% / 3Y 94% / 5Y 88%）。"
+    ],
+    "positive": [
+     "基本面质量 66.07，处于历史中枢附近，未出现明显恶化。",
+     "估值吸引力 82.76：DY / PB / PE 三项在自身历史分位中均偏便宜，估值处于历史较有利区间。",
+     "市场确认 80.45：Close/MA250 与 RS60 相对银行板块均较强，市场正在确认。高分只代表确认强，不代表价格便宜。",
+     "宏观估值环境 100.00：长期低利率环境对银行估值分母端有利。该分数已长期处于高位，当前边际新增信息有限，不应解读为每日新增的宏观利好。",
+     "前瞻基本面状态：INSUFFICIENT_EVIDENCE（趋势性上下文，不参与评分）。"
+    ]
+   },
+   "missing_pillars": [],
+   "model_fingerprint": "53121253aa546693be996d9f9d8dbe93528cb036351c2770a85d36c768c50dc1",
+   "model_id": "CMB_SCORE_MODEL_V4",
+   "model_status": "FULLY_AVAILABLE",
+   "pillars": {
+    "MACRO": {
+     "cn10y": {
+      "asof": "2026-10-28",
+      "raw_pp": 1.6344999999999998,
+      "raw_pp_display": "1.63%",
+      "saturation_note_zh": "当前固定历史锚点下，近期长期利率长期低于历史P10，因此Macro Pillar在近年高度饱和。该分数表达宏观估值环境所处长期Regime，不代表每日新增宏观信息。",
+      "staleness_td": 1
+     },
+     "members": [
+      {
+       "id": "MACRO_TRANSFER",
+       "raw": null,
+       "score": 100.0,
+       "status": "AVAILABLE"
+      }
+     ],
+     "missing_members": [],
+     "missing_reason": null,
+     "pillar": "MACRO",
+     "score": 100.0,
+     "score_display": "100.00",
+     "status": "FULLY_AVAILABLE"
+    },
+    "MARKET_CONFIRMATION": {
+     "components": [
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "confirmation_unit_0_1",
+       "basis_value": 1.0,
+       "component_id": "ABSOLUTE_TREND",
+       "display_name": "Absolute Trend（Close / MA250）",
+       "earned_points": 60.0,
+       "explanation": "招商银行自身趋势确认：Close / MA250 越高越强；高分 = 自身趋势真正转强，权重 60%。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 60.0,
+       "normalized_score": 100.0,
+       "period_end": "2026-10-29",
+       "raw_unit": "ratio",
+       "raw_value": 1.103138836707123,
+       "raw_value_date": "2026-10-29",
+       "source": "T01_CANONICAL_MA250",
+       "weight_pct": 60.0
+      },
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "confirmation_unit_0_1",
+       "basis_value": 0.511342,
+       "component_id": "RS60",
+       "display_name": "RS60（相对银行板块 60 日强弱）",
+       "earned_points": 20.453681,
+       "explanation": "相对银行板块 60 日强弱；仅作辅助确认，权重 40%。『跌得少』不等同于『趋势转强』。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 40.0,
+       "normalized_score": 51.134203,
+       "period_end": "2026-10-29",
+       "raw_unit": "ratio",
+       "raw_value": 0.0034026090345347093,
+       "raw_value_date": "2026-10-29",
+       "source": "BFQ_VS_BENCHMARK_399986",
+       "weight_pct": 40.0
+      }
+     ],
+     "members": [
+      {
+       "id": "RS60_CONFIRMATION",
+       "raw": null,
+       "score": 51.13420301151157,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "T01_CONFIRMATION_ONLY",
+       "raw": null,
+       "score": 100.0,
+       "status": "AVAILABLE"
+      }
+     ],
+     "missing_members": [],
+     "missing_reason": null,
+     "pillar": "MARKET_CONFIRMATION",
+     "score": 80.45368120460464,
+     "score_display": "80.45",
+     "status": "FULLY_AVAILABLE"
+    },
+    "PRICE_LOCATION": {
+     "components": [
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "minmax_position_ratio_0_1",
+       "basis_value": 0.9871390155500994,
+       "component_id": "PRICE_1Y",
+       "display_name": "1年价格位置",
+       "earned_points": 0.321525,
+       "explanation": "当前价在近 1 年区间中的位置；越低越接近低位，得分越高。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 25.0,
+       "normalized_score": 1.286098,
+       "period_end": "2026-10-29",
+       "raw_unit": "position_ratio_0_1",
+       "raw_value": 0.9871390155500994,
+       "raw_value_date": "2026-10-29",
+       "source": "H4_QFQ_MINMAX_252",
+       "weight_pct": 25.0
+      },
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "minmax_position_ratio_0_1",
+       "basis_value": 0.9446121991200069,
+       "component_id": "PRICE_3Y",
+       "display_name": "3年价格位置",
+       "earned_points": 1.938573,
+       "explanation": "当前价在近 3 年区间中的位置；长期银行投资权重高于 1Y。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 35.0,
+       "normalized_score": 5.53878,
+       "period_end": "2026-10-29",
+       "raw_unit": "position_ratio_0_1",
+       "raw_value": 0.9446121991200069,
+       "raw_value_date": "2026-10-29",
+       "source": "H4_QFQ_MINMAX_756",
+       "weight_pct": 35.0
+      },
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "minmax_position_ratio_0_1",
+       "basis_value": 0.8845611692262036,
+       "component_id": "PRICE_5Y",
+       "display_name": "5年价格位置",
+       "earned_points": 4.617553,
+       "explanation": "当前价在近 5 年区间中的位置；权重最高但不过度垄断。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 40.0,
+       "normalized_score": 11.543883,
+       "period_end": "2026-10-29",
+       "raw_unit": "position_ratio_0_1",
+       "raw_value": 0.8845611692262036,
+       "raw_value_date": "2026-10-29",
+       "source": "H4_QFQ_MINMAX_1260",
+       "weight_pct": 40.0
+      }
+     ],
+     "members": [
+      {
+       "id": "POS1260",
+       "raw": 0.8845611692262036,
+       "score": 11.543883077379636,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "POS252",
+       "raw": 0.9871390155500994,
+       "score": 1.286098444990058,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "POS756",
+       "raw": 0.9446121991200069,
+       "score": 5.5387800879993065,
+       "status": "AVAILABLE"
+      }
+     ],
+     "missing_members": [],
+     "missing_reason": null,
+     "pillar": "PRICE_LOCATION",
+     "score": 6.877650872999119,
+     "score_display": "6.88",
+     "status": "FULLY_AVAILABLE"
+    },
+    "QUALITY": {
+     "member_dates": {
+      "A01": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 0.9400000000000001,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "A02": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 385.1,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "A03": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 1.5308398607654092,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "A04": {
+       "available_from": "2026-08-28",
+       "canonical_source": "CMB_OFFICIAL",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": "集团信用成本(年化)；GROUP口径；官方 SEMI_ANNUAL_INTERIM_REPORT 披露，公告日 2026-08-28",
+       "period_end": "2026-06-30",
+       "raw_value": 0.69,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-08-28",
+       "unit": "percentage_points",
+       "v4_overlay": true
+      },
+      "A05": {
+       "available_from": "2026-08-28",
+       "canonical_source": "CMB_OFFICIAL",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": "零售贷款不良率；GROUP口径；官方 SEMI_ANNUAL_INTERIM_REPORT 披露，公告日 2026-08-28",
+       "period_end": "2026-06-30",
+       "raw_value": 1.16,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-08-28",
+       "unit": "percentage_points",
+       "v4_overlay": true
+      },
+      "A06": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 0.77,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "D02": {
+       "available_from": "2026-03-28",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2025-12-31",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2025-12-31",
+       "raw_value": 3.998568,
+       "raw_value_date": "2025-12-31",
+       "scope": "COMPANY",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.067417+00:00",
+       "unit": "score",
+       "v4_overlay": false
+      },
+      "F01": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 14.069999999999999,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP / 监管合并口径",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "F02": {
+       "available_from": "2026-08-28",
+       "canonical_source": "CMB_OFFICIAL",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": "活期存款日均余额占比；GROUP口径；官方 SEMI_ANNUAL_INTERIM_REPORT 披露，公告日 2026-08-28",
+       "period_end": "2026-06-30",
+       "raw_value": 49.6,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-08-28",
+       "unit": "percentage_points",
+       "v4_overlay": true
+      },
+      "F03": {
+       "available_from": "2026-08-28",
+       "canonical_source": "CMB_OFFICIAL",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": "客户存款平均成本率；GROUP口径；官方 SEMI_ANNUAL_INTERIM_REPORT 披露，公告日 2026-08-28",
+       "period_end": "2026-06-30",
+       "raw_value": 0.97,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-08-28",
+       "unit": "percentage_points",
+       "v4_overlay": true
+      },
+      "F04": {
+       "available_from": "2026-03-27",
+       "canonical_source": "CMB_OFFICIAL",
+       "date_suffix": "2025-12-31",
+       "freshness_policy_id": "CADENCE_MISMATCH__NOT_ADMITTED",
+       "freshness_status": "CURRENT_BY_DISCLOSURE_CADENCE",
+       "observation_status_note": null,
+       "period_end": "2025-12-31",
+       "raw_value": 200.03,
+       "raw_value_date": "2025-12-31",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-03-27",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "P01": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 1.83,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "P02": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 1.1400000000000001,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "P03": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 13.420000000000002,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      },
+      "P04": {
+       "available_from": "2026-03-28",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2025-12-31",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2025-12-31",
+       "raw_value": 2.8567302131919714,
+       "raw_value_date": "2025-12-31",
+       "scope": "COMPANY",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.067417+00:00",
+       "unit": "percent",
+       "v4_overlay": false
+      },
+      "P05": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 5.99,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percent",
+       "v4_overlay": false
+      },
+      "P06": {
+       "available_from": "2026-08-29",
+       "canonical_source": "LIXINGER",
+       "date_suffix": "2026-06-30",
+       "freshness_policy_id": null,
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "observation_status_note": null,
+       "period_end": "2026-06-30",
+       "raw_value": 29.695646561642373,
+       "raw_value_date": "2026-06-30",
+       "scope": "GROUP",
+       "source_version": "SNAPSHOT@2026-09-26T06:31:33.406438+00:00",
+       "unit": "percentage_points",
+       "v4_overlay": false
+      }
+     },
+     "members": [
+      {
+       "id": "A01",
+       "raw": 0.9400000000000001,
+       "score": 8.801169590643275,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "A02",
+       "raw": 385.1,
+       "score": 5.6222587719298245,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "A03",
+       "raw": 1.5308398607654092,
+       "score": 4.402369337069676,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "A04",
+       "raw": 0.69,
+       "score": 3.3552631578947367,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "A05",
+       "raw": 1.16,
+       "score": 0.9473684210526315,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "A06",
+       "raw": 0.77,
+       "score": 3.390092879256966,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "D02",
+       "raw": 3.998568,
+       "score": 5.2612736842105265,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "F01",
+       "raw": 14.069999999999999,
+       "score": 7.307017543859646,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "F02",
+       "raw": 49.6,
+       "score": 1.1403508771929824,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "F03",
+       "raw": 0.97,
+       "score": 5.2631578947368425,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "F04",
+       "raw": 200.03,
+       "score": 3.9473684210526314,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P01",
+       "raw": 1.83,
+       "score": 1.9838056680161942,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P02",
+       "raw": 1.1400000000000001,
+       "score": 4.066985645933015,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P03",
+       "raw": 13.420000000000002,
+       "score": 2.571428571428573,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P04",
+       "raw": 2.8567302131919714,
+       "score": 2.4324242146105175,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P05",
+       "raw": 5.99,
+       "score": 3.3142105263157893,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "P06",
+       "raw": 29.695646561642373,
+       "score": 2.262327788884316,
+       "status": "AVAILABLE"
+      }
+     ],
+     "missing_members": [],
+     "missing_reason": null,
+     "pillar": "QUALITY",
+     "score": 66.06887299408814,
+     "score_display": "66.07",
+     "status": "FULLY_AVAILABLE"
+    },
+    "VALUATION": {
+     "components": [
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "percentile_of_own_history",
+       "basis_value": 0.7786916602907421,
+       "component_id": "DY",
+       "display_name": "Dividend Yield",
+       "earned_points": 23.36075,
+       "explanation": "历史分位越高 = 相对自身历史越便宜；PB 为银行估值核心锚，权重 55%。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 30.0,
+       "normalized_score": 77.869166,
+       "period_end": "2026-10-29",
+       "raw_unit": "percent",
+       "raw_value": 0.0469,
+       "raw_value_date": "2026-10-29",
+       "source": "LIXINGER_FUNDAMENTAL_BANK",
+       "weight_pct": 30.0
+      },
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "percentile_of_own_history",
+       "basis_value": 0.10941086457536343,
+       "component_id": "PB",
+       "display_name": "PB",
+       "earned_points": 48.982402,
+       "explanation": "历史分位越高 = 相对自身历史越便宜；PB 为银行估值核心锚，权重 55%。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 55.0,
+       "normalized_score": 89.058914,
+       "period_end": "2026-10-29",
+       "raw_unit": "times",
+       "raw_value": 0.9458,
+       "raw_value_date": "2026-10-29",
+       "source": "LIXINGER_FUNDAMENTAL_BANK",
+       "weight_pct": 55.0
+      },
+      {
+       "available_from": "2026-10-29",
+       "basis_unit": "percentile_of_own_history",
+       "basis_value": 0.30566182096403977,
+       "component_id": "PE",
+       "display_name": "PE",
+       "earned_points": 10.415073,
+       "explanation": "历史分位越高 = 相对自身历史越便宜；PB 为银行估值核心锚，权重 55%。",
+       "freshness_status": "CURRENT_LATEST_ELIGIBLE",
+       "max_points": 15.0,
+       "normalized_score": 69.433818,
+       "period_end": "2026-10-29",
+       "raw_unit": "times",
+       "raw_value": 7.1389,
+       "raw_value_date": "2026-10-29",
+       "source": "LIXINGER_FUNDAMENTAL_BANK",
+       "weight_pct": 15.0
+      }
+     ],
+     "members": [
+      {
+       "id": "DY_SCORE",
+       "raw": null,
+       "score": 77.86916602907421,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "PB_SCORE",
+       "raw": null,
+       "score": 89.05891354246366,
+       "status": "AVAILABLE"
+      },
+      {
+       "id": "PE_SCORE",
+       "raw": null,
+       "score": 69.43381790359602,
+       "status": "AVAILABLE"
+      }
+     ],
+     "missing_members": [],
+     "missing_reason": null,
+     "pillar": "VALUATION",
+     "score": 82.75822494261668,
+     "score_display": "82.76",
+     "status": "FULLY_AVAILABLE"
+    }
+   },
+   "risk_overlay": {
+    "applied_to_pillars": false,
+    "missing_fields": [
+     "credit_card_npl_ratio",
+     "npl_formation_rate"
+    ],
+    "mode": "INDEPENDENT_READ_ONLY_ADAPTER",
+    "netted_into_score": false,
+    "overlay_id": "CMB_BANK_RISK_OVERLAY_V1_1",
+    "range": "0..-20",
+    "source": "COMMON_RISK_OVERLAY_SERVICE",
+    "status": "NOT_FULLY_AVAILABLE",
+    "zero_fill": false
+   },
+   "score_date": "2026-10-29",
+   "scores": {
+    "macro_valuation_env_score": 100.0,
+    "market_confirmation_score": 80.45368120460464,
+    "price_location_score": 6.877650872999119,
+    "quality_score": 66.06887299408814,
+    "valuation_score": 82.75822494261668
+   }
   }
  },
  "display_map": {
@@ -125887,6 +126613,7 @@
   "0.00297801199371428": "0",
   "0.0031641775938032746": "0",
   "0.0031707803538414403": "0",
+  "0.0034026090345347093": "0.00",
   "0.003559600177411637": "0",
   "0.004090621066797917": "0.00",
   "0.004185601351982315": "0",
@@ -125991,6 +126718,7 @@
   "0.10235767682576193": "0.10",
   "0.10431447746883989": "0.10",
   "0.10544478527607362": "0.11",
+  "0.10941086457536343": "0.11",
   "0.10996168582375479": "0.11",
   "0.11040949100650593": "0.11",
   "0.175377": "0.18",
@@ -126016,8 +126744,10 @@
   "0.29844738355376654": "0.30",
   "0.30047938638542665": "0.30",
   "0.30099693251533743": "0.30",
+  "0.30566182096403977": "0.31",
   "0.3063218390804598": "0.31",
   "0.30635285112897054": "0.31",
+  "0.321525": "0.32",
   "0.391425": "0.39",
   "0.40911": "0.41",
   "0.417072": "0.42",
@@ -126027,6 +126757,7 @@
   "0.489186": "0.49",
   "0.492587": "0.49",
   "0.505613": "0.51",
+  "0.511342": "0.51",
   "0.513635": "0.51",
   "0.515274": "0.52",
   "0.525939": "0.53",
@@ -126055,6 +126786,7 @@
   "0.72": "0.72",
   "0.75": "0.75",
   "0.77": "0.77",
+  "0.7786916602907421": "0.78",
   "0.7789272030651341": "0.78",
   "0.7789896670493686": "0.78",
   "0.7829754601226994": "0.78",
@@ -126185,6 +126917,7 @@
   "0.8837": "0.88",
   "0.8839": "0.88",
   "0.8842557437739094": "0.88",
+  "0.8845611692262036": "0.88",
   "0.8846897632620043": "0.88",
   "0.8853": "0.89",
   "0.8862": "0.89",
@@ -126379,10 +127112,12 @@
   "0.9434474021468643": "0.94",
   "0.9435028863642696": "0.94",
   "0.9440883676530756": "0.94",
+  "0.9446121991200069": "0.94",
   "0.9448824971606188": "0.94",
   "0.9451173888068151": "0.95",
   "0.9452483917671599": "0.95",
   "0.9457": "0.95",
+  "0.9458": "0.95",
   "0.946": "0.95",
   "0.9463441245499405": "0.95",
   "0.9467690449486673": "0.95",
@@ -126468,6 +127203,7 @@
   "0.9843430085511267": "0.98",
   "0.9856211034631879": "0.99",
   "0.9860659572801809": "0.99",
+  "0.9871390155500994": "0.99",
   "0.9888": "0.99",
   "0.9889942376042457": "0.99",
   "0.9891082092046394": "0.99",
@@ -126548,6 +127284,8 @@
   "1.181704": "1.18",
   "1.2": "1.2",
   "1.2266666666666666": "1.23",
+  "1.286098": "1.29",
+  "1.286098444990058": "1.29",
   "1.397791": "1.40",
   "1.4271711401660667": "1.43",
   "1.4309612846852422": "1.43",
@@ -126561,6 +127299,7 @@
   "1.5656991448873336": "1.57",
   "1.607623": "1.61",
   "1.6258000000000001": "1.63",
+  "1.6344999999999998": "1.63",
   "1.6354": "1.64",
   "1.636438": "1.64",
   "1.6364380199099582": "1.64",
@@ -126603,6 +127342,7 @@
   "1.8393": "1.84",
   "1.863083": "1.86",
   "1.87": "1.87",
+  "1.938573": "1.94",
   "1.94327": "1.94",
   "1.9838056680161942": "1.98",
   "10.005392": "10.01",
@@ -126623,6 +127363,7 @@
   "10.370115": "10.37",
   "10.404707": "10.40",
   "10.405172": "10.41",
+  "10.415073": "10.42",
   "10.42692": "10.43",
   "10.45833": "10.46",
   "10.485046": "10.49",
@@ -126750,6 +127491,8 @@
   "11.531782": "11.53",
   "11.539595": "11.54",
   "11.539872": "11.54",
+  "11.543883": "11.54",
+  "11.543883077379636": "11.54",
   "11.545723": "11.55",
   "11.555578": "11.56",
   "11.557803": "11.56",
@@ -127415,6 +128158,7 @@
   "20.397068": "20.4",
   "20.42189": "20.42",
   "20.422771": "20.42",
+  "20.453681": "20.45",
   "20.46354": "20.46",
   "20.474613": "20.47",
   "20.545416": "20.55",
@@ -127521,6 +128265,7 @@
   "23.217375": "23.22",
   "23.251235": "23.25",
   "23.324131": "23.32",
+  "23.36075": "23.36",
   "23.362857": "23.36",
   "23.367268": "23.37",
   "23.367816": "23.37",
@@ -128249,6 +128994,7 @@
   "4.475024": "4.48",
   "4.500205": "4.5",
   "4.543364": "4.54",
+  "4.617553": "4.62",
   "4.71659": "4.72",
   "4.726818": "4.73",
   "4.75526766845773": "4.76",
@@ -128598,6 +129344,7 @@
   "48.91858325160099": "48.92",
   "48.927478": "48.93",
   "48.952107": "48.95",
+  "48.982402": "48.98",
   "49.003527": "49",
   "49.013698": "49.01",
   "49.032849": "49.03",
@@ -128674,6 +129421,8 @@
   "5.411095": "5.41",
   "5.471486": "5.47",
   "5.486584": "5.49",
+  "5.53878": "5.54",
+  "5.5387800879993065": "5.54",
   "5.546976": "5.55",
   "5.591163": "5.59",
   "5.591163234692442": "5.59",
@@ -128774,6 +129523,8 @@
   "51.093053": "51.09",
   "51.096283": "51.1",
   "51.10354856812349": "51.1",
+  "51.134203": "51.13",
+  "51.13420301151157": "51.13",
   "51.136011": "51.14",
   "51.146635": "51.15",
   "51.151429": "51.15",
@@ -129279,6 +130030,7 @@
   "6.8596": "6.86",
   "6.872913": "6.87",
   "6.8745": "6.87",
+  "6.877650872999119": "6.88",
   "6.8862": "6.89",
   "6.890691": "6.89",
   "6.9111": "6.91",
@@ -129382,6 +130134,8 @@
   "69.390628": "69.39",
   "69.39451552601565": "69.39",
   "69.405892": "69.41",
+  "69.43381790359602": "69.43",
+  "69.433818": "69.43",
   "69.498715": "69.5",
   "69.561028": "69.56",
   "69.745146": "69.75",
@@ -129406,6 +130160,7 @@
   "7.1156": "7.12",
   "7.132258": "7.13",
   "7.1353": "7.14",
+  "7.1389": "7.14",
   "7.1472": "7.15",
   "7.1572": "7.16",
   "7.1692": "7.17",
@@ -129632,6 +130387,8 @@
   "77.724936": "77.72",
   "77.74428622156792": "77.74",
   "77.858546": "77.86",
+  "77.869166": "77.87",
+  "77.86916602907421": "77.87",
   "77.880094": "77.88",
   "77.884427": "77.88",
   "77.89272": "77.89",
@@ -129791,6 +130548,7 @@
   "80.330638": "80.33",
   "80.346154": "80.35",
   "80.35422900141457": "80.35",
+  "80.45368120460464": "80.45",
   "80.496798": "80.5",
   "80.51112": "80.51",
   "80.54541614223973": "80.55",
@@ -129868,6 +130626,7 @@
   "82.70187523918867": "82.70",
   "82.72509578544062": "82.73",
   "82.737789": "82.74",
+  "82.75822494261668": "82.76",
   "82.76967627629585": "82.77",
   "82.792145": "82.79",
   "82.81837950113345": "82.82",
@@ -130068,6 +130827,8 @@
   "89.050953": "89.05",
   "89.056088": "89.06",
   "89.05702176844538": "89.06",
+  "89.05891354246366": "89.06",
+  "89.058914": "89.06",
   "89.100078": "89.1",
   "89.12716763005781": "89.13",
   "89.175459": "89.18",
