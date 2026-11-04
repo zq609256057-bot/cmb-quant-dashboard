@@ -43,15 +43,15 @@
     "assets/data/CMB/CMB_SCORE_MODEL_V4/days/2023.json": "8a2648b784e259951f8da6aae1036ecd67605c4d403cdadbdbefbd28551bf2ec",
     "assets/data/CMB/CMB_SCORE_MODEL_V4/days/2024.json": "b7fa17f92097cc5acf8c3ed89712c4eb721d619e528459b5dd23b1dd649a8984",
     "assets/data/CMB/CMB_SCORE_MODEL_V4/days/2025.json": "e3fbb873e5f614c8e657a42143b2102e800f19741b6c3d56ab990d7bf7876261",
-    "assets/data/CMB/CMB_SCORE_MODEL_V4/days/2026.json": "95202e1813e2e43d70fd75d87203bd6c396682372f64bd1fd93e306458b1c38e",
-    "assets/data/CMB/CMB_SCORE_MODEL_V4/index.json": "c871323d6009b4cdad34e7160907e00f9d5bf414062c0e0d6e2aa0cf7aba32c0",
-    "assets/data/CMB/CMB_SCORE_MODEL_V4/view.json": "f9d69c21701e4810c9342b57f4dd86e6cb649c424b6507e20e207479f4939741",
+    "assets/data/CMB/CMB_SCORE_MODEL_V4/days/2026.json": "8bb9c276486e5003f9d076a218d8fcfdc8998c1b356594840e8bfae9f81c74c8",
+    "assets/data/CMB/CMB_SCORE_MODEL_V4/index.json": "4f3a496b165563a5abaec90db72288b16acd367ed10d5c1a453e281b3fc5200e",
+    "assets/data/CMB/CMB_SCORE_MODEL_V4/view.json": "0aafddfc83bf7b0f1eeaf50371ac6c650b4aebc8ea62e6f51cd740163fa54cde",
     "assets/data/CMB/cmb_v4_quality_diagnostic.json": "f565513be5653c342e4c861565b7f0bbe6afaa36261e0751dc967e2d924dcad0",
     "assets/data/CMB/models.json": "dd0d789ce2e6914a2e43594084273565efcfbca3af27abfef53667679f033732",
-    "assets/data/banks.json": "ee894ed08b1640650452333ae8569251ef7290193df4bdf9e8d7cfcf4af8db40",
+    "assets/data/banks.json": "e63b68419657dddd0dc8d3526bae6b127faca1214a1ed4b6146f563fa65316e8",
     "assets/shell.js": "bb9527e6c460c81cf0907524eefb926653ce7a7eebd4cececf431f991b4ed286",
     "index.html": "e4cfb83bda75a4fd94a5f924c886cd884fca817bee5a0f997cf73259c2348c7b"
   },
-  "generated_at": "2026-11-03T07:46:58.877270+00:00",
+  "generated_at": "2026-11-04T07:51:23.619483+00:00",
   "owner": "CMB_SCORE_MODEL_V4"
 }
